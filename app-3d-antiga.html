@@ -1,0 +1,816 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Club App — Mapa de Mesas</title>
+<style>
+  :root{
+    --bg:#0C0F14; --surface:#141A23; --surface-2:#1B2430; --line:#242F3E;
+    --ink:#E9EDF3; --muted:#8A94A6; --faint:#5C6B80;
+    --accent:#D9A94E; --accent-ink:#1A1405;
+    --livre:#35C98B; --reservada:#F5B03E; --ocupada:#FF5C7A;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:"Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+    display:flex; flex-direction:column;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  /* ---------- barra superior ---------- */
+  header{
+    flex:none; height:58px; display:flex; align-items:center; gap:14px;
+    padding:0 14px; background:var(--surface); border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:9px; min-width:0}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none;
+    box-shadow:0 0 10px 1px rgba(217,169,78,.55)}
+  .brand b{font-size:17px; letter-spacing:.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .counts{display:flex; gap:6px; margin-left:auto}
+  .chip{
+    display:flex; align-items:center; gap:6px; background:var(--surface-2);
+    border:1px solid var(--line); border-radius:999px; padding:5px 11px;
+    font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--muted);
+  }
+  .chip i{width:8px;height:8px;border-radius:50%;flex:none}
+  .chip.c-livre i{background:var(--livre)} .chip.c-res i{background:var(--reservada)} .chip.c-ocu i{background:var(--ocupada)}
+  .chip b{color:var(--ink)}
+  .seg{display:flex; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:3px}
+  .seg button{
+    border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; font-weight:700;
+    padding:7px 16px; border-radius:999px; cursor:pointer; letter-spacing:.3px;
+  }
+  .seg button.on{background:var(--accent); color:var(--accent-ink)}
+  .iconbtn{
+    width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--ink);font-size:19px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;
+  }
+  /* ---------- ferramentas de edição ---------- */
+  #tools{
+    flex:none; display:none; align-items:center; gap:8px; padding:8px 14px;
+    background:#10151D; border-bottom:1px solid var(--line); overflow-x:auto;
+  }
+  body.editar #tools{display:flex}
+  #tools .hint{color:var(--faint); font-size:12.5px; margin-left:auto; white-space:nowrap}
+  .tbtn{
+    border:1px dashed #33415466; background:var(--surface-2); color:var(--ink); font:inherit;
+    font-size:13.5px; font-weight:600; padding:9px 14px; border-radius:11px; cursor:pointer; white-space:nowrap;
+  }
+  .tbtn.gold{border:0; background:var(--accent); color:var(--accent-ink)}
+  /* ---------- palco / mapa ---------- */
+  #stage{flex:1; min-height:0; position:relative}
+  svg{width:100%; height:100%; display:block; touch-action:none}
+  .zona rect.zr{fill:rgba(233,237,243,.018); stroke:#26313F; stroke-width:1.5; rx:10}
+  body.editar .zona rect.zr{stroke-dasharray:7 5; stroke:#33445C}
+  .zona text{fill:var(--faint); font-size:13px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase}
+  .zona .rh{fill:var(--accent); stroke:#0C0F14; stroke-width:2; display:none; cursor:nwse-resize}
+  body.editar .zona .rh{display:block}
+  .mesa{cursor:pointer}
+  .mesa .rim{stroke:#3D4C61; stroke-width:2}
+  .mesa.livre .rim{stroke:#2E8562}
+  .mesa.reservada .rim{stroke:var(--reservada); stroke-width:2.5}
+  .mesa.ocupada .rim{stroke:var(--ocupada); stroke-width:2.5}
+  .mesa.sel .rim{stroke:var(--accent); stroke-width:4}
+  .mesa .chair{fill:#2C3644}
+  .mesa .chairback{fill:#1D2530}
+  .mesa .sofa{stroke:#151B24; stroke-width:1.5}
+  .mesa .seam{stroke:rgba(10,13,18,.55); stroke-width:1.5}
+  .mesa text.num{
+    fill:var(--ink); font-size:19px; font-weight:800; text-anchor:middle; pointer-events:none;
+    stroke:#0B0E13; stroke-width:3px; paint-order:stroke; stroke-linejoin:round;
+  }
+  .mesa text.rnome{
+    fill:var(--reservada); font-size:10.5px; font-weight:700; text-anchor:middle; pointer-events:none;
+    stroke:#0B0E13; stroke-width:2.5px; paint-order:stroke; stroke-linejoin:round;
+  }
+  .mesa.ocupada text.rnome{fill:var(--ocupada)}
+  .mesa.dj text.num{font-size:12px; letter-spacing:2.5px; fill:var(--muted); stroke-width:2.5px}
+  /* ---------- folha inferior ---------- */
+  #scrim{position:fixed; inset:0; background:rgba(4,6,10,.55); opacity:0; pointer-events:none; transition:opacity .2s; z-index:8}
+  #scrim.open{opacity:1; pointer-events:auto}
+  #sheet{
+    position:fixed; left:50%; bottom:0; transform:translate(-50%,105%); transition:transform .25s ease;
+    width:min(600px,100vw); max-height:82vh; overflow-y:auto; z-index:9;
+    background:var(--surface); border:1px solid var(--line); border-bottom:0;
+    border-radius:20px 20px 0 0; padding:18px 20px 26px; box-shadow:0 -18px 50px rgba(0,0,0,.5);
+  }
+  #sheet.open{transform:translate(-50%,0)}
+  @media (prefers-reduced-motion:reduce){ #sheet,#scrim{transition:none} }
+  .sh-head{display:flex; align-items:center; gap:12px; margin-bottom:16px}
+  .sh-head h2{font-size:21px; letter-spacing:.3px}
+  .sh-head .sub{color:var(--muted); font-size:13px; margin-top:2px}
+  .badge{margin-left:auto; padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; flex:none}
+  .badge.livre{background:#123326; color:var(--livre)}
+  .badge.reservada{background:#332711; color:var(--reservada)}
+  .badge.ocupada{background:#38141F; color:var(--ocupada)}
+  .frm{display:grid; grid-template-columns:1fr 1fr; gap:11px}
+  .frm .full{grid-column:1/-1}
+  label.fld{display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.6px; text-transform:uppercase}
+  input,select,textarea{
+    font:inherit; font-size:16px; color:var(--ink); background:var(--surface-2);
+    border:1px solid var(--line); border-radius:11px; padding:11px 12px; min-height:46px; width:100%;
+    -webkit-user-select:text; user-select:text;
+  }
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+  .acts{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
+  .btn{
+    flex:1 1 auto; border:0; border-radius:12px; padding:14px 16px; font:inherit; font-size:15px;
+    font-weight:700; cursor:pointer; background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
+    min-height:50px;
+  }
+  .btn.gold{background:var(--accent); color:var(--accent-ink); border:0}
+  .btn.green{background:#123326; color:var(--livre); border:1px solid #1E5C40}
+  .btn.red{background:#38141F; color:var(--ocupada); border:1px solid #6E2A3C}
+  .btn.ghost{background:transparent}
+  .menu-list{display:flex; flex-direction:column; gap:8px}
+  .menu-list .btn{text-align:left; flex:none}
+  .tipos{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px}
+  .tipos button{
+    border:1px solid var(--line); background:var(--surface-2); color:var(--muted); border-radius:12px;
+    padding:12px 6px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .tipos button.on{border-color:var(--accent); color:var(--ink); background:#2A2415}
+  .rlist{display:flex; flex-direction:column; gap:9px}
+  .rrow{display:flex; align-items:center; gap:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:11px 14px; cursor:pointer}
+  .rrow .rn{width:44px; height:44px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex:none}
+  .rrow.reservada .rn{background:#332711; color:var(--reservada)}
+  .rrow.ocupada .rn{background:#38141F; color:var(--ocupada)}
+  .rrow .ri{min-width:0} .rrow .ri b{display:block; font-size:15px}
+  .rrow .ri span{color:var(--muted); font-size:12.5px}
+  .rrow time{margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:700}
+  .empty{color:var(--faint); text-align:center; padding:26px 0; font-size:14px}
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); z-index:20;
+    background:var(--ink); color:#10151D; font-weight:700; font-size:14px;
+    padding:11px 20px; border-radius:999px; transition:transform .25s; pointer-events:none;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+
+<header>
+  <div class="brand"><span class="dot"></span><b id="clubname">Club</b></div>
+  <div class="counts">
+    <span class="chip c-livre"><i></i><b id="c-livre">0</b><span>livres</span></span>
+    <span class="chip c-res"><i></i><b id="c-res">0</b><span>reservadas</span></span>
+    <span class="chip c-ocu"><i></i><b id="c-ocu">0</b><span>ocupadas</span></span>
+  </div>
+  <div class="seg">
+    <button id="m-servico" class="on" onclick="setMode('servico')">Serviço</button>
+    <button id="m-editar" onclick="setMode('editar')">Editar planta</button>
+  </div>
+  <button class="iconbtn" onclick="openMenu()" aria-label="Menu">☰</button>
+</header>
+
+<div id="tools">
+  <button class="tbtn gold" onclick="sheetNovaMesa()">＋ Mesa</button>
+  <button class="tbtn" onclick="novaZona()">＋ Zona</button>
+  <button class="tbtn" onclick="sheetDimensoes()">Dimensões do club</button>
+  <span class="hint">Arrasta mesas e zonas para posicionar · toca para editar</span>
+</div>
+
+<main id="stage"><svg id="floor" xmlns="http://www.w3.org/2000/svg"></svg></main>
+
+<div id="scrim" onclick="closeSheet()"></div>
+<aside id="sheet" role="dialog"></aside>
+<div id="toast"></div>
+<input type="file" id="importfile" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* ================= modelo ================= */
+const LS = 'clubapp-v1';
+const DEF = {
+  redonda:    {nome:'Redonda',    lugares:6},
+  quadrada:   {nome:'Quadrada',   lugares:4},
+  retangular: {nome:'Retangular', lugares:8},
+  vip:        {nome:'Mesa VIP',   lugares:10},
+  sofa:       {nome:'Sofá/Lounge',lugares:4},
+  dj:         {nome:'Cabine DJ',  lugares:0},
+};
+let _id = 1;
+const uid = p => (p||'i') + (_id++) + '-' + Math.random().toString(36).slice(2,7);
+
+function seed(){
+  _id = 1;
+  const mesas = [];
+  const M = (label,tipo,x,y,rot) => mesas.push({
+    id:uid('m'), label:String(label), tipo, x, y, rot:rot||0,
+    lugares:DEF[tipo].lugares, estado:'livre', reserva:null
+  });
+  /* Sunset */
+  M(22,'retangular',115,190,90);
+  M(24,'quadrada',300,88);  M(25,'redonda',412,92);  M(26,'redonda',532,92);
+  M(31,'quadrada',655,96);  M(32,'redonda',775,96);  M(35,'quadrada',905,96);
+  M(23,'quadrada',355,188); M(27,'quadrada',512,188); M(30,'redonda',655,188); M(34,'quadrada',802,192);
+  M(21,'quadrada',315,272); M(20,'redonda',422,274); M(28,'redonda',540,276);
+  M(29,'quadrada',652,278); M(33,'redonda',772,280); M(36,'quadrada',905,282);
+  /* Mid 1 */
+  M(14,'redonda',352,405); M(15,'redonda',472,405); M(16,'redonda',592,405);
+  M(17,'redonda',712,405); M(18,'redonda',832,405); M(19,'redonda',952,405);
+  /* VIP rooms */
+  M('VIP 2','vip',110,432); M('VIP 1','vip',110,718);
+  /* DJ */
+  mesas.push({id:uid('m'), label:'DJ', tipo:'dj', x:592, y:528, rot:0, lugares:0, estado:'livre', reserva:null});
+  /* Lounge 1 */
+  M(3,'sofa',438,600); M(2,'sofa',438,695); M(1,'sofa',438,790);
+  M(4,'sofa',560,600); M(5,'sofa',560,695); M(6,'sofa',560,790);
+  /* Lounge 2 */
+  M(9,'sofa',838,600); M(8,'sofa',838,695); M(7,'sofa',838,790);
+  M(10,'sofa',960,600); M(11,'sofa',960,695); M(12,'sofa',960,790);
+  return {
+    clube:{nome:'O Meu Club', largura:1200, altura:900},
+    zonas:[
+      {id:uid('z'), nome:'Sunset',     x:16,  y:16,  w:1168, h:300},
+      {id:uid('z'), nome:'VIP Room 2', x:16,  y:332, w:190,  h:200},
+      {id:uid('z'), nome:'VIP Room 1', x:16,  y:548, w:190,  h:336},
+      {id:uid('z'), nome:'Mid 1',      x:222, y:332, w:962,  h:146},
+      {id:uid('z'), nome:'Lounge 1',   x:360, y:494, w:330,  h:390},
+      {id:uid('z'), nome:'Lounge 2',   x:760, y:494, w:330,  h:390},
+    ],
+    mesas
+  };
+}
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
+function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
+let state = load() || seed();
+let mode = 'servico';
+let sel = null;
+
+const $ = id => document.getElementById(id);
+const svg = $('floor');
+const findM = id => state.mesas.find(m => m.id===id);
+const findZ = id => state.zonas.find(z => z.id===id);
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const snap = v => Math.round(v/5)*5;
+
+/* dimensões visuais por tipo (centradas em 0,0) */
+function dims(m){
+  switch(m.tipo){
+    case 'redonda':    return {w:66,h:66,round:true};
+    case 'quadrada':   return {w:62,h:62};
+    case 'retangular': return {w:112,h:58};
+    case 'vip':        return {w:84,h:188};
+    case 'sofa':       return {w:96,h:66};
+    case 'dj':         return {w:104,h:64};
+    default:           return {w:62,h:62};
+  }
+}
+
+/* ================= render ================= */
+function chair(x,y,rot){
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot})">
+    <ellipse cx="1" cy="1.5" rx="8.5" ry="9" fill="rgba(0,0,0,.35)"/>
+    <rect class="chair" x="-7" y="-7.5" width="13" height="15" rx="4.5"/>
+    <rect class="chairback" x="4.5" y="-8.5" width="4.5" height="17" rx="2.2"/>
+  </g>`;
+}
+function chairsSVG(m){
+  if(m.tipo==='dj' || m.tipo==='sofa' || m.tipo==='vip' || !m.lugares) return '';
+  const d = dims(m), n = Math.min(m.lugares,16), out = [];
+  if(d.round){
+    const R = d.w/2 + 14;
+    for(let i=0;i<n;i++){
+      const a = (i/n)*360 - 90;
+      out.push(`<g transform="rotate(${a})">${chair(R,0,0)}</g>`);
+    }
+  } else {
+    const vert = d.h > d.w, len = (vert?d.h:d.w) - 12, off = (vert?d.w:d.h)/2 + 14;
+    const nA = Math.ceil(n/2), nB = n - nA;
+    const row = (cnt,side) => {
+      for(let i=0;i<cnt;i++){
+        const t = (i+1)/(cnt+1), p = -len/2 + t*len;
+        if(vert) out.push(chair(side*off, p, side>0?0:180));
+        else out.push(chair(p, side*off, side>0?90:-90));
+      }
+    };
+    row(nA,-1); row(nB,1);
+  }
+  return out.join('');
+}
+function corpoSVG(m){
+  const d = dims(m);
+  switch(m.tipo){
+    case 'redonda': return `
+      <ellipse cy="5" rx="36.5" ry="35.5" fill="rgba(0,0,0,.45)"/>
+      <circle cy="3.5" r="33" fill="#12171F"/>
+      <circle class="rim" r="33" fill="url(#topR)"/>
+      <circle r="23" fill="none" stroke="rgba(233,237,243,.07)" stroke-width="1.5"/>
+      <circle r="3.2" fill="#D9A94E" opacity=".85"/>`;
+    case 'quadrada': return `
+      <rect x="-32" y="-27" width="64" height="64" rx="12" fill="rgba(0,0,0,.45)"/>
+      <rect x="-31" y="-27.5" width="62" height="62" rx="11" fill="#12171F"/>
+      <rect class="rim" x="-31" y="-31" width="62" height="62" rx="11" fill="url(#topL)"/>
+      <rect x="-21" y="-21" width="42" height="42" rx="7" fill="none" stroke="rgba(233,237,243,.07)" stroke-width="1.5"/>
+      <circle r="3" fill="#D9A94E" opacity=".85"/>`;
+    case 'retangular': return `
+      <rect x="-57" y="-25" width="114" height="60" rx="11" fill="rgba(0,0,0,.45)"/>
+      <rect x="-56" y="-25.5" width="112" height="58" rx="10" fill="#12171F"/>
+      <rect class="rim" x="-56" y="-29" width="112" height="58" rx="10" fill="url(#topL)"/>
+      <rect x="-46" y="-19" width="92" height="38" rx="6" fill="none" stroke="rgba(233,237,243,.07)" stroke-width="1.5"/>
+      <circle cx="-24" r="3" fill="#D9A94E" opacity=".85"/><circle cx="24" r="3" fill="#D9A94E" opacity=".85"/>`;
+    case 'sofa': return `
+      <ellipse cy="6" rx="51" ry="37" fill="rgba(0,0,0,.4)"/>
+      <rect class="sofa" x="-48" y="-33" width="96" height="17" rx="8" fill="url(#sofaG)"/>
+      <rect class="sofa" x="-48" y="-33" width="15" height="60" rx="7.5" fill="url(#sofaG)"/>
+      <rect class="sofa" x="33"  y="-33" width="15" height="60" rx="7.5" fill="url(#sofaG)"/>
+      <line class="seam" x1="-16" y1="-31" x2="-16" y2="-18"/>
+      <line class="seam" x1="16"  y1="-31" x2="16"  y2="-18"/>
+      <line class="seam" x1="-46" y1="-4"  x2="-33" y2="-4"/>
+      <line class="seam" x1="33"  y1="-4"  x2="46"  y2="-4"/>
+      <rect x="-17" y="-3" width="34" height="24" rx="6" fill="#12171F"/>
+      <rect class="rim" x="-17" y="-6" width="34" height="24" rx="6" fill="url(#topL)"/>
+      <circle cy="6" r="2.6" fill="#D9A94E" opacity=".85"/>`;
+    case 'vip': return `
+      <ellipse cy="6" rx="45" ry="97" fill="rgba(0,0,0,.4)"/>
+      <rect class="sofa" x="-40" y="-93" width="80" height="17" rx="8" fill="url(#vipG)"/>
+      <rect class="sofa" x="-40" y="-93" width="15" height="182" rx="7.5" fill="url(#vipG)"/>
+      <rect class="sofa" x="25"  y="-93" width="15" height="182" rx="7.5" fill="url(#vipG)"/>
+      <line class="seam" x1="-38" y1="-48" x2="-25" y2="-48"/><line class="seam" x1="25" y1="-48" x2="38" y2="-48"/>
+      <line class="seam" x1="-38" y1="0"   x2="-25" y2="0"/>  <line class="seam" x1="25" y1="0"   x2="38" y2="0"/>
+      <line class="seam" x1="-38" y1="48"  x2="-25" y2="48"/> <line class="seam" x1="25" y1="48"  x2="38" y2="48"/>
+      <rect x="-15" y="-63" width="30" height="142" rx="7" fill="#12171F"/>
+      <rect class="rim" x="-15" y="-66" width="30" height="142" rx="7" fill="url(#topL)"/>
+      <circle cy="-38" r="7" fill="#10151D" stroke="#8A94A6" stroke-width="1.5"/>
+      <circle cy="-38" r="2.4" fill="#D9A94E"/>
+      <circle cy="30" r="3" fill="#D9A94E" opacity=".85"/>`;
+    case 'dj': return `
+      <ellipse cy="7" rx="55" ry="31" fill="rgba(0,0,0,.45)"/>
+      <rect x="-52" y="-28" width="104" height="46" rx="9" fill="#12171F"/>
+      <rect class="rim" x="-52" y="-31" width="104" height="46" rx="9" fill="url(#djG)"/>
+      <circle cx="-28" cy="-8" r="12" fill="#0C1015" stroke="#465870" stroke-width="1.5"/>
+      <circle cx="-28" cy="-8" r="3.6" fill="#D9A94E"/>
+      <circle cx="28" cy="-8" r="12" fill="#0C1015" stroke="#465870" stroke-width="1.5"/>
+      <circle cx="28" cy="-8" r="3.6" fill="#D9A94E"/>
+      <rect x="-11" y="-17" width="22" height="20" rx="3.5" fill="#161D27" stroke="rgba(233,237,243,.08)"/>
+      <circle cx="-5.5" cy="-12" r="1.6" fill="#8A94A6"/><circle cx="0" cy="-12" r="1.6" fill="#8A94A6"/><circle cx="5.5" cy="-12" r="1.6" fill="#8A94A6"/>
+      <line x1="-5" y1="-7" x2="-5" y2="0" stroke="#5C6B80" stroke-width="1.6"/>
+      <line x1="5" y1="-7" x2="5" y2="0" stroke="#5C6B80" stroke-width="1.6"/>
+      <rect x="-46" y="18" width="92" height="5" rx="2.5" fill="#0C1015"/>`;
+    default: return '';
+  }
+}
+function mesaSVG(m){
+  const d = dims(m);
+  const nome = m.reserva && m.reserva.nome ? m.reserva.nome : '';
+  const curto = nome.length>11 ? nome.slice(0,10)+'…' : nome;
+  const halo = m.tipo==='dj' ? '' :
+    `<ellipse rx="${(d.w/2+24).toFixed(0)}" ry="${(d.h/2+24).toFixed(0)}"
+      fill="url(#halo${m.estado==='livre'?'L':m.estado==='reservada'?'R':'O'})" pointer-events="none"/>`;
+  const label = m.tipo==='dj'
+    ? `<g transform="rotate(${-(m.rot||0)})"><text class="num" y="34">${esc(m.label)}</text></g>`
+    : `<g transform="rotate(${-(m.rot||0)})">
+        <text class="num" y="${curto?1:7}">${esc(m.label)}</text>
+        ${curto?`<text class="rnome" y="17">${esc(curto)}</text>`:''}
+      </g>`;
+  const cls = 'mesa ' + (m.tipo==='dj' ? 'dj' : m.estado) + (sel===m.id?' sel':'');
+  return `<g class="${cls}" data-id="${m.id}" transform="translate(${m.x},${m.y}) rotate(${m.rot||0})">
+    ${halo}${chairsSVG(m)}${corpoSVG(m)}${label}</g>`;
+}
+function zonaSVG(z){
+  return `<g class="zona" data-id="${z.id}">
+    <rect class="zr" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="10"/>
+    <text x="${z.x+16}" y="${z.y+26}">${esc(z.nome)}</text>
+    <rect x="${z.x+16}" y="${z.y+33}" width="26" height="2.5" rx="1.25" fill="#D9A94E" opacity=".45"/>
+    <circle class="rh" data-rh="${z.id}" cx="${z.x+z.w}" cy="${z.y+z.h}" r="11"/>
+  </g>`;
+}
+function render(){
+  const c = state.clube;
+  svg.setAttribute('viewBox', `0 0 ${c.largura} ${c.altura}`);
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.innerHTML = `
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <circle cx="1.2" cy="1.2" r="1.2" fill="#1D2632"/>
+      </pattern>
+      <radialGradient id="vign" cx="50%" cy="35%" r="85%">
+        <stop offset="0%" stop-color="#161D28"/><stop offset="100%" stop-color="#0A0D12"/>
+      </radialGradient>
+      <radialGradient id="topR" cx="35%" cy="30%" r="85%">
+        <stop offset="0%" stop-color="#42505F"/><stop offset="60%" stop-color="#2C3644"/><stop offset="100%" stop-color="#232C38"/>
+      </radialGradient>
+      <linearGradient id="topL" x1="0" y1="0" x2="0.35" y2="1">
+        <stop offset="0%" stop-color="#3E4B5C"/><stop offset="100%" stop-color="#252F3C"/>
+      </linearGradient>
+      <linearGradient id="sofaG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#443D5E"/><stop offset="100%" stop-color="#292344"/>
+      </linearGradient>
+      <linearGradient id="vipG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#57441F"/><stop offset="100%" stop-color="#33270F"/>
+      </linearGradient>
+      <linearGradient id="djG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2D3A4C"/><stop offset="100%" stop-color="#1A212C"/>
+      </linearGradient>
+      <radialGradient id="haloL">
+        <stop offset="0%" stop-color="#35C98B" stop-opacity=".22"/>
+        <stop offset="55%" stop-color="#35C98B" stop-opacity=".08"/>
+        <stop offset="100%" stop-color="#35C98B" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="haloR">
+        <stop offset="0%" stop-color="#F5B03E" stop-opacity=".45"/>
+        <stop offset="55%" stop-color="#F5B03E" stop-opacity=".16"/>
+        <stop offset="100%" stop-color="#F5B03E" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="haloO">
+        <stop offset="0%" stop-color="#FF5C7A" stop-opacity=".45"/>
+        <stop offset="55%" stop-color="#FF5C7A" stop-opacity=".16"/>
+        <stop offset="100%" stop-color="#FF5C7A" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect x="0" y="0" width="${c.largura}" height="${c.altura}" fill="url(#vign)" rx="14"/>
+    <rect x="0" y="0" width="${c.largura}" height="${c.altura}" fill="url(#grid)" rx="14"/>
+    ${state.zonas.map(zonaSVG).join('')}
+    ${state.mesas.map(mesaSVG).join('')}`;
+  svg.querySelectorAll('g.mesa').forEach(bindMesa);
+  svg.querySelectorAll('g.zona').forEach(bindZona);
+  $('clubname').textContent = c.nome;
+  document.title = c.nome;
+  const cnt = {livre:0,reservada:0,ocupada:0};
+  state.mesas.forEach(m => { if(m.tipo!=='dj') cnt[m.estado] = (cnt[m.estado]||0)+1; });
+  $('c-livre').textContent = cnt.livre; $('c-res').textContent = cnt.reservada; $('c-ocu').textContent = cnt.ocupada;
+}
+
+/* ================= interação (arrastar / tocar) ================= */
+function svgPt(e){
+  const r = svg.getBoundingClientRect(), c = state.clube;
+  const s = Math.min(r.width/c.largura, r.height/c.altura);
+  const ox = (r.width - c.largura*s)/2, oy = (r.height - c.altura*s)/2;
+  return { x:(e.clientX-r.left-ox)/s, y:(e.clientY-r.top-oy)/s };
+}
+function bindMesa(g){
+  g.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const m = findM(g.dataset.id); if(!m) return;
+    const p0 = svgPt(e), sx = e.clientX, sy = e.clientY, ox = m.x, oy = m.y;
+    let moved = false;
+    g.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      if(Math.hypot(ev.clientX-sx, ev.clientY-sy) > 9) moved = true;
+      if(moved && mode==='editar'){
+        const p = svgPt(ev);
+        m.x = snap(ox + p.x - p0.x); m.y = snap(oy + p.y - p0.y);
+        g.setAttribute('transform', `translate(${m.x},${m.y}) rotate(${m.rot||0})`);
+      }
+    };
+    const up = () => {
+      g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+      if(moved && mode==='editar'){ save(); render(); }
+      else if(!moved){ tapMesa(m); }
+    };
+    g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  });
+}
+function bindZona(g){
+  const z = findZ(g.dataset.id); if(!z) return;
+  const rh = g.querySelector('.rh');
+  rh.addEventListener('pointerdown', e => {
+    if(mode!=='editar') return;
+    e.preventDefault(); e.stopPropagation();
+    const p0 = svgPt(e), ow = z.w, oh = z.h;
+    rh.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      const p = svgPt(ev);
+      z.w = Math.max(80, snap(ow + p.x - p0.x));
+      z.h = Math.max(60, snap(oh + p.y - p0.y));
+      const r = g.querySelector('.zr');
+      r.setAttribute('width',z.w); r.setAttribute('height',z.h);
+      rh.setAttribute('cx',z.x+z.w); rh.setAttribute('cy',z.y+z.h);
+    };
+    const up = () => { rh.removeEventListener('pointermove',mv); rh.removeEventListener('pointerup',up); rh.removeEventListener('pointercancel',up); save(); render(); };
+    rh.addEventListener('pointermove',mv); rh.addEventListener('pointerup',up); rh.addEventListener('pointercancel',up);
+  });
+  g.addEventListener('pointerdown', e => {
+    if(mode!=='editar' || e.target===rh) return;
+    e.preventDefault();
+    const p0 = svgPt(e), sx = e.clientX, sy = e.clientY, ox = z.x, oy = z.y;
+    let moved = false;
+    g.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      if(Math.hypot(ev.clientX-sx, ev.clientY-sy) > 9) moved = true;
+      if(moved){
+        const p = svgPt(ev);
+        z.x = snap(ox + p.x - p0.x); z.y = snap(oy + p.y - p0.y);
+        const r = g.querySelector('.zr'), t = g.querySelector('text');
+        r.setAttribute('x',z.x); r.setAttribute('y',z.y);
+        t.setAttribute('x',z.x+16); t.setAttribute('y',z.y+26);
+        rh.setAttribute('cx',z.x+z.w); rh.setAttribute('cy',z.y+z.h);
+      }
+    };
+    const up = () => {
+      g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+      if(moved){ save(); render(); } else { sheetZona(z.id); }
+    };
+    g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  });
+}
+function tapMesa(m){
+  if(mode==='editar'){ sheetEditarMesa(m.id); return; }
+  if(m.tipo==='dj') return;
+  sheetServico(m.id);
+}
+
+/* ================= folha inferior ================= */
+function openSheet(html){ $('sheet').innerHTML = html; $('sheet').classList.add('open'); $('scrim').classList.add('open'); }
+function closeSheet(){ $('sheet').classList.remove('open'); $('scrim').classList.remove('open'); sel = null; render(); }
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+const ESTADO_PT = {livre:'Livre', reservada:'Reservada', ocupada:'Ocupada'};
+
+/* horas em formato 24h — dia completo */
+function horaOptions(cur){
+  const seq = [];
+  for(let h=0; h<24; h++)
+    ['00','30'].forEach(mi => seq.push(String(h).padStart(2,'0')+':'+mi));
+  let out = `<option value="">— sem hora —</option>`;
+  if(cur && !seq.includes(cur)) out += `<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  seq.forEach(t => out += `<option value="${t}" ${t===cur?'selected':''}>${t}</option>`);
+  return out;
+}
+
+/* ---- serviço: reservas ---- */
+function sheetServico(id){
+  const m = findM(id); if(!m) return;
+  sel = id; render();
+  const r = m.reserva || {};
+  let acts = '';
+  if(m.estado==='livre'){
+    acts = `<button class="btn gold" onclick="actReservar('${id}')">Guardar reserva</button>
+            <button class="btn red" onclick="actOcupar('${id}')">Ocupar já (walk-in)</button>`;
+  } else if(m.estado==='reservada'){
+    acts = `<button class="btn green" onclick="actCheckin('${id}')">✓ Check-in — chegou</button>
+            <button class="btn" onclick="actGuardarAlt('${id}')">Guardar alterações</button>
+            <button class="btn red ghost" onclick="actLibertar('${id}', true)">Cancelar reserva</button>`;
+  } else {
+    acts = `<button class="btn" onclick="actGuardarAlt('${id}')">Guardar alterações</button>
+            <button class="btn red" onclick="actLibertar('${id}', false)">Libertar mesa</button>`;
+  }
+  openSheet(`
+    <div class="sh-head">
+      <div><h2>Mesa ${esc(m.label)}</h2><div class="sub">${DEF[m.tipo].nome} · ${m.lugares} lugares</div></div>
+      <span class="badge ${m.estado}">${ESTADO_PT[m.estado]}</span>
+    </div>
+    <div class="frm">
+      <label class="fld full">Nome de quem reservou
+        <input id="f-nome" value="${esc(r.nome)}" placeholder="Ex.: Sr. Carlos" autocomplete="off"></label>
+      <label class="fld">Telefone
+        <input id="f-tel" value="${esc(r.tel)}" inputmode="tel" placeholder="84 000 0000"></label>
+      <label class="fld">Nº de pessoas
+        <input id="f-pax" value="${esc(r.pax)}" inputmode="numeric" placeholder="${m.lugares}"></label>
+      <label class="fld">Hora prevista
+        <select id="f-hora">${horaOptions(r.hora)}</select></label>
+      <label class="fld">Consumo mín. / nota
+        <input id="f-nota" value="${esc(r.nota)}" placeholder="Ex.: 2 garrafas"></label>
+    </div>
+    <div class="acts">${acts}</div>`);
+}
+function lerForm(){
+  return {
+    nome: $('f-nome').value.trim(), tel: $('f-tel').value.trim(),
+    pax: $('f-pax').value.trim(), hora: $('f-hora').value, nota: $('f-nota').value.trim()
+  };
+}
+function actReservar(id){
+  const m = findM(id), r = lerForm();
+  if(!r.nome){ toast('Indica o nome de quem reservou'); $('f-nome').focus(); return; }
+  m.reserva = r; m.estado = 'reservada'; save(); closeSheet();
+  toast(`Mesa ${m.label} reservada para ${r.nome}`);
+}
+function actOcupar(id){
+  const m = findM(id), r = lerForm();
+  m.reserva = r.nome ? r : null; m.estado = 'ocupada'; save(); closeSheet();
+  toast(`Mesa ${m.label} ocupada`);
+}
+function actCheckin(id){
+  const m = findM(id); m.reserva = lerForm(); m.estado = 'ocupada'; save(); closeSheet();
+  toast(`Check-in feito — mesa ${m.label}`);
+}
+function actGuardarAlt(id){
+  const m = findM(id); m.reserva = lerForm(); save(); closeSheet();
+  toast('Alterações guardadas');
+}
+function actLibertar(id, cancelar){
+  const m = findM(id);
+  m.estado = 'livre'; m.reserva = null; save(); closeSheet();
+  toast(cancelar ? `Reserva da mesa ${m.label} cancelada` : `Mesa ${m.label} livre`);
+}
+
+/* ---- edição de mesas ---- */
+function sheetEditarMesa(id){
+  const m = findM(id); if(!m) return;
+  sel = id; render();
+  const ops = Object.keys(DEF).map(t =>
+    `<option value="${t}" ${m.tipo===t?'selected':''}>${DEF[t].nome}</option>`).join('');
+  openSheet(`
+    <div class="sh-head"><div><h2>Editar mesa</h2><div class="sub">Arrasta no mapa para mudar de sítio</div></div></div>
+    <div class="frm">
+      <label class="fld">Número / nome
+        <input id="e-label" value="${esc(m.label)}" autocomplete="off"></label>
+      <label class="fld">Lugares
+        <input id="e-lug" value="${m.lugares}" inputmode="numeric"></label>
+      <label class="fld full">Tipo de mesa
+        <select id="e-tipo">${ops}</select></label>
+    </div>
+    <div class="acts">
+      <button class="btn gold" onclick="actMesaGuardar('${id}')">Guardar</button>
+      <button class="btn" onclick="actMesaRodar('${id}')">⟳ Rodar</button>
+      <button class="btn" onclick="actMesaDuplicar('${id}')">Duplicar</button>
+      <button class="btn red ghost" onclick="actMesaEliminar('${id}')">Eliminar</button>
+    </div>`);
+}
+function actMesaGuardar(id){
+  const m = findM(id);
+  m.label = $('e-label').value.trim() || m.label;
+  m.lugares = Math.max(0, parseInt($('e-lug').value,10) || m.lugares);
+  m.tipo = $('e-tipo').value;
+  save(); closeSheet(); toast('Mesa atualizada');
+}
+function actMesaRodar(id){
+  const m = findM(id); m.rot = (m.rot||0)===90 ? 0 : 90; save(); render();
+  sel = id;
+}
+function actMesaDuplicar(id){
+  const m = findM(id);
+  const n = JSON.parse(JSON.stringify(m));
+  n.id = uid('m'); n.x += 60; n.y += 60; n.estado='livre'; n.reserva=null;
+  const num = parseInt(m.label,10);
+  if(!isNaN(num)) n.label = String(proximoNumero());
+  state.mesas.push(n); save(); closeSheet(); toast('Mesa duplicada');
+}
+function actMesaEliminar(id){
+  const m = findM(id);
+  if(!confirm(`Eliminar a mesa ${m.label}?`)) return;
+  state.mesas = state.mesas.filter(x => x.id!==id); save(); closeSheet(); toast('Mesa eliminada');
+}
+function proximoNumero(){
+  let mx = 0;
+  state.mesas.forEach(m => { const n = parseInt(m.label,10); if(!isNaN(n) && n>mx) mx = n; });
+  return mx+1;
+}
+
+/* ---- nova mesa ---- */
+let novoTipo = 'redonda';
+function sheetNovaMesa(){
+  novoTipo = 'redonda';
+  openSheet(`
+    <div class="sh-head"><div><h2>Nova mesa</h2><div class="sub">Aparece no centro — depois arrasta para o sítio</div></div></div>
+    <div class="tipos" id="tiposel">
+      ${Object.keys(DEF).filter(t=>t!=='dj').map(t =>
+        `<button data-t="${t}" class="${t===novoTipo?'on':''}" onclick="pickTipo('${t}')">${DEF[t].nome}</button>`).join('')}
+      <button data-t="dj" onclick="pickTipo('dj')">Cabine DJ</button>
+    </div>
+    <div class="frm">
+      <label class="fld">Número / nome
+        <input id="n-label" value="${proximoNumero()}" autocomplete="off"></label>
+      <label class="fld">Lugares
+        <input id="n-lug" value="${DEF[novoTipo].lugares}" inputmode="numeric"></label>
+    </div>
+    <div class="acts"><button class="btn gold" onclick="actNovaMesa()">Adicionar mesa</button></div>`);
+}
+function pickTipo(t){
+  novoTipo = t;
+  document.querySelectorAll('#tiposel button').forEach(b => b.classList.toggle('on', b.dataset.t===t));
+  $('n-lug').value = DEF[t].lugares;
+  if(t==='dj') $('n-label').value = 'DJ';
+}
+function actNovaMesa(){
+  const c = state.clube;
+  state.mesas.push({
+    id:uid('m'), label:$('n-label').value.trim() || String(proximoNumero()),
+    tipo:novoTipo, x:snap(c.largura/2), y:snap(c.altura/2), rot:0,
+    lugares:Math.max(0, parseInt($('n-lug').value,10) || DEF[novoTipo].lugares),
+    estado:'livre', reserva:null
+  });
+  save(); closeSheet(); toast('Mesa adicionada ao centro do mapa');
+}
+
+/* ---- zonas ---- */
+function novaZona(){
+  const c = state.clube;
+  state.zonas.push({id:uid('z'), nome:'Nova zona', x:snap(c.largura/2-160), y:snap(c.altura/2-110), w:320, h:220});
+  save(); render(); toast('Zona adicionada — arrasta e redimensiona pelo canto');
+}
+function sheetZona(id){
+  const z = findZ(id); if(!z) return;
+  openSheet(`
+    <div class="sh-head"><div><h2>Zona</h2><div class="sub">Arrasta a zona; o ponto dourado no canto redimensiona</div></div></div>
+    <div class="frm"><label class="fld full">Nome da zona
+      <input id="z-nome" value="${esc(z.nome)}" autocomplete="off"></label></div>
+    <div class="acts">
+      <button class="btn gold" onclick="actZonaGuardar('${id}')">Guardar</button>
+      <button class="btn red ghost" onclick="actZonaEliminar('${id}')">Eliminar zona</button>
+    </div>`);
+}
+function actZonaGuardar(id){
+  const z = findZ(id); z.nome = $('z-nome').value.trim() || z.nome;
+  save(); closeSheet(); toast('Zona atualizada');
+}
+function actZonaEliminar(id){
+  const z = findZ(id);
+  if(!confirm(`Eliminar a zona "${z.nome}"? (as mesas ficam)`)) return;
+  state.zonas = state.zonas.filter(x => x.id!==id); save(); closeSheet(); toast('Zona eliminada');
+}
+
+/* ---- dimensões / definições ---- */
+function sheetDimensoes(){
+  const c = state.clube;
+  openSheet(`
+    <div class="sh-head"><div><h2>O club</h2><div class="sub">Nome e proporções da planta</div></div></div>
+    <div class="frm">
+      <label class="fld full">Nome do club
+        <input id="d-nome" value="${esc(c.nome)}" autocomplete="off"></label>
+      <label class="fld">Largura (unidades)
+        <input id="d-w" value="${c.largura}" inputmode="numeric"></label>
+      <label class="fld">Altura (unidades)
+        <input id="d-h" value="${c.altura}" inputmode="numeric"></label>
+    </div>
+    <div class="acts"><button class="btn gold" onclick="actDimensoes()">Guardar</button></div>`);
+}
+function actDimensoes(){
+  const c = state.clube;
+  c.nome = $('d-nome').value.trim() || c.nome;
+  c.largura = Math.max(400, parseInt($('d-w').value,10) || c.largura);
+  c.altura = Math.max(300, parseInt($('d-h').value,10) || c.altura);
+  save(); closeSheet(); toast('Planta atualizada');
+}
+
+/* ---- menu ---- */
+function openMenu(){
+  openSheet(`
+    <div class="sh-head"><div><h2>Menu</h2><div class="sub">${esc(state.clube.nome)}</div></div></div>
+    <div class="menu-list">
+      <button class="btn" onclick="sheetReservas()">📋 Lista de reservas da noite</button>
+      <button class="btn" onclick="actLimparNoite()">🌙 Nova noite — limpar todas as reservas</button>
+      <button class="btn" onclick="actExportar()">⬇ Exportar planta (ficheiro)</button>
+      <button class="btn" onclick="$('importfile').click()">⬆ Importar planta</button>
+      <button class="btn ghost" onclick="actRepor()">Repor planta de exemplo</button>
+      <button class="btn red ghost" onclick="actVazia()">Começar do zero (planta vazia)</button>
+    </div>`);
+}
+function sheetReservas(){
+  const rs = state.mesas.filter(m => m.tipo!=='dj' && m.estado!=='livre');
+  rs.sort((a,b) => ((a.reserva&&a.reserva.hora)||'99').localeCompare((b.reserva&&b.reserva.hora)||'99'));
+  const rows = rs.map(m => {
+    const r = m.reserva || {};
+    return `<div class="rrow ${m.estado}" onclick="sheetServico('${m.id}')">
+      <span class="rn">${esc(m.label)}</span>
+      <span class="ri"><b>${esc(r.nome || '(sem nome)')}</b>
+        <span>${esc(r.pax ? r.pax+' pessoas' : '')}${r.pax && r.nota ? ' · ' : ''}${esc(r.nota||'')}</span></span>
+      <time>${esc(r.hora || '—')}</time>
+    </div>`;
+  }).join('');
+  openSheet(`
+    <div class="sh-head"><div><h2>Reservas da noite</h2>
+      <div class="sub">${rs.length ? rs.length + ' mesa(s) com reserva ou ocupada(s)' : ''}</div></div></div>
+    <div class="rlist">${rows || '<div class="empty">Ainda não há reservas esta noite.</div>'}</div>`);
+}
+function actLimparNoite(){
+  if(!confirm('Limpar todas as reservas e pôr todas as mesas livres?')) return;
+  state.mesas.forEach(m => { m.estado='livre'; m.reserva=null; });
+  save(); closeSheet(); toast('Todas as mesas livres — boa noite de trabalho! 🥂');
+}
+function actExportar(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.clube.nome||'club').toLowerCase().replace(/\s+/g,'-') + '-planta.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Planta exportada');
+}
+$('importfile').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const s = JSON.parse(rd.result);
+      if(!s.clube || !Array.isArray(s.mesas)) throw 0;
+      state = s; save(); closeSheet(); render(); toast('Planta importada');
+    }catch(err){ toast('Ficheiro inválido'); }
+  };
+  rd.readAsText(f); e.target.value = '';
+});
+function actRepor(){
+  if(!confirm('Repor a planta de exemplo? A planta atual será substituída.')) return;
+  state = seed(); save(); closeSheet(); render(); toast('Planta de exemplo carregada');
+}
+function actVazia(){
+  if(!confirm('Começar do zero com uma planta vazia?')) return;
+  state = {clube:{nome:'O Meu Club', largura:1200, altura:900}, zonas:[], mesas:[]};
+  save(); closeSheet(); render(); setMode('editar');
+  toast('Planta vazia — usa ＋ Mesa e ＋ Zona para montar');
+}
+
+/* ================= modo ================= */
+function setMode(m){
+  mode = m; sel = null;
+  document.body.classList.toggle('editar', m==='editar');
+  $('m-servico').classList.toggle('on', m==='servico');
+  $('m-editar').classList.toggle('on', m==='editar');
+  closeSheet();
+}
+
+render();
+</script>

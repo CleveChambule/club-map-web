@@ -1,0 +1,1233 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Club App — Planta Baixa</title>
+<style>
+  :root{
+    --creme:#12161E; --creme-2:#1A202B; --branco:#1E2530;
+    --ink:#EDE6D6; --ink-soft:#9A9080; --line:#2A3140;
+    --accent:#C9552F; --brass:#C9A227;
+    --livre:#43C98B; --reservada:#E5A33C; --ocupada:#FF5C6C;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--creme); color:var(--ink); overflow:hidden;
+    font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+    display:flex; flex-direction:column;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  /* ---------- barra superior ---------- */
+  header{
+    flex:none; height:58px; display:flex; align-items:center; gap:14px;
+    padding:0 14px; background:var(--creme); border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px; min-width:0}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--brass);flex:none;
+    box-shadow:0 0 10px 2px rgba(201,162,39,.6)}
+  .brand b{font-family:Georgia,"Times New Roman",serif; font-size:18px; letter-spacing:.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .counts{display:flex; gap:6px; margin-left:auto}
+  .chip{
+    display:flex; align-items:center; gap:6px; background:var(--branco);
+    border:1px solid var(--line); border-radius:999px; padding:5px 11px;
+    font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink-soft);
+  }
+  .chip i{width:9px;height:9px;border-radius:50%;flex:none}
+  .chip.c-livre i{background:var(--livre)} .chip.c-res i{background:var(--reservada)} .chip.c-ocu i{background:var(--ocupada)}
+  .chip b{color:var(--ink)}
+  .seg{display:flex; background:var(--branco); border:1px solid var(--line); border-radius:999px; padding:3px}
+  .seg button{
+    border:0; background:transparent; color:var(--ink-soft); font:inherit; font-size:13px; font-weight:700;
+    padding:7px 16px; border-radius:999px; cursor:pointer; letter-spacing:.3px;
+  }
+  .seg button.on{background:var(--ink); color:var(--creme)}
+  .iconbtn{
+    width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--branco);
+    color:var(--ink);font-size:18px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;
+  }
+  /* ---------- ferramentas de edição ---------- */
+  #tools{
+    flex:none; display:none; align-items:center; gap:8px; padding:8px 14px;
+    background:var(--creme-2); border-bottom:1px solid var(--line); overflow-x:auto;
+  }
+  body.editar #tools{display:flex}
+  #tools .hint{color:var(--ink-soft); font-size:12.5px; margin-left:auto; white-space:nowrap}
+  .tbtn{
+    border:1.5px dashed #4A4234; background:var(--branco); color:var(--ink); font:inherit;
+    font-size:13.5px; font-weight:600; padding:9px 14px; border-radius:11px; cursor:pointer; white-space:nowrap;
+  }
+  .tbtn.gold{border:0; background:var(--accent); color:#FFF1E8}
+  /* ---------- palco / mapa ---------- */
+  #stage{flex:1; min-height:0; position:relative; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch}
+  svg{display:block; margin:0 auto; touch-action:none}
+  .zona rect.zr{fill:rgba(201,162,39,.05); stroke:#39424F; stroke-width:2}
+  .zona rect.zi{fill:none; stroke:rgba(201,162,39,.16); stroke-width:1.5}
+  body.editar .zona rect.zr{stroke-dasharray:8 5; stroke:var(--accent)}
+  body.editar .zona.msel rect.zr{stroke:#3EC6E0; stroke-width:3.5}
+  body.editar .zona.msel text{fill:#3EC6E0}
+  .zona text{fill:#8F8877; font-size:12.5px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase;
+    stroke:#10141B; stroke-width:3px; paint-order:stroke; stroke-linejoin:round}
+  .zona .rh{fill:var(--accent); stroke:#10141B; stroke-width:2; display:none; cursor:nwse-resize}
+  body.editar .zona .rh{display:block}
+  .mesa{cursor:pointer}
+  .mesa .rim{stroke:#A8894A; stroke-width:1.5}
+  .mesa.parede .rim{stroke:#414B5C; stroke-width:2}
+  .mesa .mh{fill:var(--brass); stroke:#10141B; stroke-width:2; display:none; cursor:nwse-resize}
+  body.editar .mesa .mh{display:block}
+  .mesa .ftxt{fill:#D9CCA9; font-weight:800; letter-spacing:2px; text-anchor:middle; pointer-events:none}
+  .mesa .tbx{stroke:none}
+  body.editar .mesa .tbx{stroke:#5C5340; stroke-width:1.5; stroke-dasharray:5 4}
+  .mesa .mr{fill:#1E2836; stroke:var(--brass); stroke-width:2; display:none; cursor:grab}
+  .mesa .mrl{stroke:var(--brass); stroke-width:1.5; stroke-dasharray:3 3; display:none}
+  body.editar .mesa .mr, body.editar .mesa .mrl{display:block}
+  .mesa.reservada .rim{stroke:var(--reservada); stroke-width:2.6}
+  .mesa.ocupada .rim{stroke:var(--ocupada); stroke-width:2.6}
+  .mesa.sel .rim{stroke:var(--accent); stroke-width:3.5}
+  .mesa.msel .rim{stroke:#3EC6E0; stroke-width:3.5}
+  .mesa.msel .ftxt{fill:#3EC6E0}
+  .mesa .chip3{fill:#0F131A; stroke:rgba(237,230,214,.85); stroke-width:1.8}
+  .mesa.reservada .chip3{fill:#B3801F}
+  .mesa.ocupada .chip3{fill:#C13B4A}
+  .mesa text.num{fill:#FFF6E6; font-size:12.5px; font-weight:800; text-anchor:middle; pointer-events:none}
+  .mesa text.num.dj{fill:var(--brass); font-size:11px; letter-spacing:2.5px;
+    stroke:rgba(6,8,12,.85); stroke-width:2.5px; paint-order:stroke}
+  .mesa text.rnome{
+    fill:var(--ink); font-size:10.5px; font-weight:800; text-anchor:middle; pointer-events:none;
+    stroke:#10141B; stroke-width:2.5px; paint-order:stroke; stroke-linejoin:round;
+  }
+  /* ---------- folha inferior ---------- */
+  #scrim{position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .2s; z-index:8}
+  #scrim.open{opacity:1; pointer-events:auto}
+  #sheet{
+    position:fixed; left:50%; bottom:0; transform:translate(-50%,105%); transition:transform .25s ease;
+    width:min(600px,100vw); max-height:82vh; overflow-y:auto; z-index:9;
+    background:var(--creme); border:1px solid var(--line); border-bottom:0;
+    border-radius:20px 20px 0 0; padding:18px 20px 26px; box-shadow:0 -16px 48px rgba(0,0,0,.55);
+  }
+  #sheet.open{transform:translate(-50%,0)}
+  @media (prefers-reduced-motion:reduce){ #sheet,#scrim{transition:none} }
+  .sh-head{display:flex; align-items:center; gap:12px; margin-bottom:16px}
+  .sh-head h2{font-family:Georgia,"Times New Roman",serif; font-size:22px; letter-spacing:.3px}
+  .sh-head .sub{color:var(--ink-soft); font-size:13px; margin-top:2px}
+  .badge{margin-left:auto; padding:6px 13px; border-radius:999px; font-size:12px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; flex:none}
+  .badge.livre{background:#143326; color:var(--livre)}
+  .badge.reservada{background:#33270F; color:var(--reservada)}
+  .badge.ocupada{background:#38141B; color:var(--ocupada)}
+  .frm{display:grid; grid-template-columns:1fr 1fr; gap:11px}
+  .frm .full{grid-column:1/-1}
+  label.fld{display:flex; flex-direction:column; gap:5px; font-size:11.5px; font-weight:700; color:var(--ink-soft); letter-spacing:.8px; text-transform:uppercase}
+  input,select,textarea{
+    font:inherit; font-size:16px; color:var(--ink); background:#1A212C;
+    border:1px solid var(--line); border-radius:11px; padding:11px 12px; min-height:46px; width:100%;
+    -webkit-user-select:text; user-select:text;
+  }
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+  .acts{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
+  .btn{
+    flex:1 1 auto; border-radius:12px; padding:14px 16px; font:inherit; font-size:15px;
+    font-weight:700; cursor:pointer; background:var(--creme-2); color:var(--ink); border:1px solid var(--line);
+    min-height:50px;
+  }
+  .btn.gold{background:var(--accent); color:#FFF1E8; border:0}
+  .btn.green{background:#143326; color:var(--livre); border:1px solid #1E5C40}
+  .btn.red{background:#38141B; color:var(--ocupada); border:1px solid #6E2A38}
+  .btn.ghost{background:transparent}
+  .menu-list{display:flex; flex-direction:column; gap:8px}
+  .menu-list .btn{text-align:left; flex:none}
+  .tipos{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px}
+  .tipos button{
+    border:1px solid var(--line); background:#1A212C; color:var(--ink-soft); border-radius:12px;
+    padding:12px 6px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .tipos button.on{border:1.5px solid var(--accent); color:var(--ink); background:#33221B}
+  .rlist{display:flex; flex-direction:column; gap:9px}
+  .rrow{display:flex; align-items:center; gap:12px; background:var(--branco); border:1px solid var(--line); border-radius:12px; padding:11px 14px; cursor:pointer}
+  .rrow .rn{width:44px; height:44px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex:none}
+  .rrow.reservada .rn{background:#33270F; color:var(--reservada)}
+  .rrow.ocupada .rn{background:#38141B; color:var(--ocupada)}
+  .rrow .ri{min-width:0} .rrow .ri b{display:block; font-size:15px}
+  .rrow .ri span{color:var(--ink-soft); font-size:12.5px}
+  .rrow time{margin-left:auto; color:var(--ink-soft); font-variant-numeric:tabular-nums; font-weight:700}
+  .empty{color:var(--ink-soft); text-align:center; padding:26px 0; font-size:14px}
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); z-index:20;
+    background:var(--ink); color:var(--creme); font-weight:700; font-size:14px;
+    padding:11px 20px; border-radius:999px; transition:transform .25s; pointer-events:none;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+
+<header>
+  <div class="brand"><span class="dot"></span><b id="clubname">Club</b></div>
+  <div class="counts">
+    <span class="chip c-livre"><i></i><b id="c-livre">0</b><span>livres</span></span>
+    <span class="chip c-res"><i></i><b id="c-res">0</b><span>reservadas</span></span>
+    <span class="chip c-ocu"><i></i><b id="c-ocu">0</b><span>ocupadas</span></span>
+  </div>
+  <div class="seg">
+    <button id="m-servico" class="on" onclick="setMode('servico')">Serviço</button>
+    <button id="m-editar" onclick="setMode('editar')">Editar planta</button>
+  </div>
+  <button class="iconbtn" onclick="openMenu()" aria-label="Menu">☰</button>
+</header>
+
+<div id="tools">
+  <button class="tbtn gold" onclick="sheetNovaMesa()">＋ Mesa</button>
+  <button class="tbtn" onclick="novaZona()">＋ Zona</button>
+  <button class="tbtn" id="btn-multi" onclick="toggleMulti()">☑ Vários</button>
+  <button class="tbtn" onclick="sheetDimensoes()">Dimensões do club</button>
+  <span class="hint">Arrasta para mover · ponto dourado no canto = tamanho · toca para editar</span>
+</div>
+
+<main id="stage"><svg id="floor" xmlns="http://www.w3.org/2000/svg"></svg></main>
+
+<div id="scrim" onclick="closeSheet()"></div>
+<aside id="sheet" role="dialog"></aside>
+<div id="toast"></div>
+<input type="file" id="importfile" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* ================= modelo ================= */
+const LS = 'clubapp-baixa-v1';
+const DEF = {
+  redonda:    {nome:'Redonda',    lugares:6},
+  oval:       {nome:'Oval',       lugares:6},
+  quadrada:   {nome:'Quadrada',   lugares:4},
+  retangular: {nome:'Retangular', lugares:8},
+  vip:        {nome:'Mesa VIP',   lugares:10},
+  sofa:       {nome:'Sofá/Lounge',lugares:4},
+  sofa2:      {nome:'Sofá em U',  lugares:5},
+  luz:        {nome:'Luz 💡',     lugares:0},
+  dj:         {nome:'Cabine DJ',  lugares:0},
+  texto:      {nome:'Texto ✍',   lugares:0},
+  portao:     {nome:'Portão vidro',lugares:0},
+  porta:      {nome:'Porta',      lugares:0},
+  parede:     {nome:'Parede',     lugares:0},
+};
+const DECOR = {dj:1, luz:1, texto:1, portao:1, porta:1, parede:1};
+let _id = 1;
+const uid = p => (p||'i') + (_id++) + '-' + Math.random().toString(36).slice(2,7);
+
+/* planta padrão — desenhada pelo chefe (exportada da própria app) */
+const SEED = {
+  "clube": {"nome":"O Meu Club","largura":1200,"altura":1180},
+  "zonas": [
+    {"id":"z46-kt6x9","nome":"VIP Room 2","x":10,"y":390,"w":185,"h":315},
+    {"id":"z47-fa4s8","nome":"VIP Room 1","x":15,"y":710,"w":180,"h":435},
+    {"id":"z48-d0n7q","nome":"Mid 1","x":315,"y":390,"w":875,"h":145},
+    {"id":"z1-9l4r9","nome":"Sunset","x":5,"y":10,"w":1180,"h":370}
+  ],
+  "mesas": [
+    {"id":"m1-z10hz","label":"22","tipo":"retangular","x":115,"y":190,"rot":90,"esc":1,"lugares":6,"estado":"livre","reserva":null,"cad":{"c":2,"b":2,"e":1,"d":1}},
+    {"id":"m2-am1o9","label":"24","tipo":"quadrada","x":235,"y":75,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m18-fjh9k","label":"14","tipo":"redonda","x":455,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m19-lxxtv","label":"15","tipo":"redonda","x":585,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m20-ptfvh","label":"16","tipo":"redonda","x":715,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m21-ctw33","label":"17","tipo":"redonda","x":850,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m22-9qzuq","label":"18","tipo":"redonda","x":980,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m23-eqyn8","label":"19","tipo":"redonda","x":1110,"y":470,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m26-94zy2","label":"DJ","tipo":"dj","x":790,"y":595,"rot":180,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":150,"h":65},
+    {"id":"m41-t463g","label":"Luz","tipo":"luz","x":410,"y":585,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m42-fj0qw","label":"Luz","tipo":"luz","x":1105,"y":540,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":34,"h":40},
+    {"id":"m43-32cvf","label":"Luz","tipo":"luz","x":1335,"y":575,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m44-m6edl","label":"Luz","tipo":"luz","x":350,"y":765,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":34,"h":34},
+    {"id":"m1-648xr","label":"37","tipo":"quadrada","x":100,"y":540,"rot":0,"esc":1,"lugares":10,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":4,"d":4},"w":60,"h":155},
+    {"id":"m2-lzspv","label":"13","tipo":"quadrada","x":100,"y":925,"rot":0,"esc":1,"lugares":12,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":5,"d":5},"w":70,"h":220},
+    {"id":"m1-l3oo3","label":"49","tipo":"sofa2","x":860,"y":905,"rot":270,"esc":1,"lugares":5,"estado":"livre","reserva":null,"w":505,"h":130},
+    {"id":"m2-jyh8f","label":"50","tipo":"sofa2","x":1120,"y":905,"rot":90,"esc":1,"lugares":5,"estado":"livre","reserva":null,"w":505,"h":130},
+    {"id":"m3-bmk05","label":"51","tipo":"sofa2","x":725,"y":905,"rot":90,"esc":1,"lugares":5,"estado":"livre","reserva":null,"w":505,"h":130},
+    {"id":"m4-am2gk","label":"9","tipo":"quadrada","x":900,"y":770,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m5-mm6g9","label":"8","tipo":"quadrada","x":895,"y":920,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m6-2aqnh","label":"7","tipo":"quadrada","x":900,"y":1050,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m7-ltkdw","label":"4","tipo":"quadrada","x":690,"y":775,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m8-nhulf","label":"5","tipo":"quadrada","x":690,"y":925,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m9-qvy1t","label":"6","tipo":"quadrada","x":690,"y":1050,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m10-llw1k","label":"10","tipo":"quadrada","x":1080,"y":770,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m11-7t3or","label":"11","tipo":"quadrada","x":1085,"y":920,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m12-4k2ii","label":"12","tipo":"quadrada","x":1090,"y":1050,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":2,"d":0},"w":55,"h":100},
+    {"id":"m2-93718","label":"25","tipo":"oval","x":390,"y":75,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m3-tyvyg","label":"23","tipo":"quadrada","x":320,"y":195,"rot":45,"esc":1,"lugares":6,"estado":"livre","reserva":null,"w":90,"h":75,"cad":{"c":1,"b":1,"e":2,"d":2}},
+    {"id":"m1-h5yj3","label":"21","tipo":"quadrada","x":255,"y":320,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m2-ust73","label":"20","tipo":"oval","x":425,"y":320,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m3-omvy2","label":"26","tipo":"oval","x":585,"y":75,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m4-tx992","label":"27","tipo":"quadrada","x":570,"y":195,"rot":45,"esc":1,"lugares":6,"estado":"livre","reserva":null,"w":90,"h":75,"cad":{"c":1,"b":1,"e":2,"d":2}},
+    {"id":"m5-26alt","label":"28","tipo":"oval","x":615,"y":320,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m6-qw57g","label":"30","tipo":"quadrada","x":795,"y":190,"rot":45,"esc":1,"lugares":6,"estado":"livre","reserva":null,"w":90,"h":75,"cad":{"c":1,"b":1,"e":2,"d":2}},
+    {"id":"m7-f1q8e","label":"31","tipo":"quadrada","x":765,"y":70,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m8-lrcom","label":"29","tipo":"quadrada","x":785,"y":320,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m9-maw6d","label":"32","tipo":"oval","x":935,"y":75,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m10-2a470","label":"35","tipo":"quadrada","x":1120,"y":75,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m11-qc6hx","label":"34","tipo":"quadrada","x":1060,"y":200,"rot":45,"esc":1,"lugares":6,"estado":"livre","reserva":null,"w":90,"h":75,"cad":{"c":1,"b":1,"e":2,"d":2}},
+    {"id":"m12-uvq1v","label":"33","tipo":"oval","x":945,"y":320,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null},
+    {"id":"m13-7kj0d","label":"36","tipo":"quadrada","x":1125,"y":330,"rot":0,"esc":1,"lugares":4,"estado":"livre","reserva":null,"cad":{"c":1,"b":1,"e":1,"d":1}},
+    {"id":"m1-ni5yp","label":"Lounge 1","tipo":"texto","x":610,"y":925,"rot":270,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m4-pw38c","label":"Portão","tipo":"portao","x":195,"y":545,"rot":90,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":300,"h":15},
+    {"id":"m5-10k6f","label":"Porta","tipo":"porta","x":210,"y":1105,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m7-6nu2e","label":"Portão","tipo":"portao","x":90,"y":10,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m8-a0mh6","label":"61","tipo":"sofa2","x":490,"y":905,"rot":270,"esc":1,"lugares":5,"estado":"livre","reserva":null,"w":505,"h":130},
+    {"id":"m10-tembf","label":"3","tipo":"quadrada","x":525,"y":775,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m11-71l0k","label":"2","tipo":"quadrada","x":525,"y":925,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m12-kxhnm","label":"1","tipo":"quadrada","x":525,"y":1050,"rot":0,"esc":1,"lugares":2,"estado":"livre","reserva":null,"cad":{"c":0,"b":0,"e":0,"d":2},"w":55,"h":100},
+    {"id":"m13-nc4rw","label":"Lounge 2","tipo":"texto","x":995,"y":925,"rot":270,"esc":1,"lugares":0,"estado":"livre","reserva":null},
+    {"id":"m1-mq0v1","label":"Parede","tipo":"parede","x":500,"y":135,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":10,"h":235},
+    {"id":"m2-08bdb","label":"Parede","tipo":"parede","x":515,"y":250,"rot":270,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":10,"h":40},
+    {"id":"m3-84cgc","label":"Parede","tipo":"parede","x":530,"y":315,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":10,"h":130},
+    {"id":"m4-y1a1y","label":"Parede","tipo":"parede","x":865,"y":195,"rot":0,"esc":1,"lugares":0,"estado":"livre","reserva":null,"w":10,"h":355}
+  ]
+};
+function seed(){
+  return JSON.parse(JSON.stringify(SEED));
+}
+function seedAntiga(){
+  _id = 1;
+  const mesas = [];
+  const M = (label,tipo,x,y,rot) => mesas.push({
+    id:uid('m'), label:String(label), tipo, x, y, rot:rot||0, esc:1,
+    lugares:DEF[tipo].lugares, estado:'livre', reserva:null
+  });
+  /* Sunset */
+  M(22,'retangular',115,190,90);
+  M(24,'quadrada',300,88);  M(25,'redonda',412,92);  M(26,'redonda',532,92);
+  M(31,'quadrada',655,96);  M(32,'redonda',775,96);  M(35,'quadrada',905,96);
+  M(23,'quadrada',355,188); M(27,'quadrada',512,188); M(30,'redonda',655,188); M(34,'quadrada',802,192);
+  M(21,'quadrada',315,272); M(20,'redonda',422,274); M(28,'redonda',540,276);
+  M(29,'quadrada',652,278); M(33,'redonda',772,280); M(36,'quadrada',905,282);
+  /* Mid 1 */
+  M(14,'redonda',352,405); M(15,'redonda',472,405); M(16,'redonda',592,405);
+  M(17,'redonda',712,405); M(18,'redonda',832,405); M(19,'redonda',952,405);
+  /* VIP rooms */
+  M('VIP 2','vip',110,432); M('VIP 1','vip',110,718);
+  /* DJ */
+  mesas.push({id:uid('m'), label:'DJ', tipo:'dj', x:592, y:528, rot:0, esc:1, lugares:0, estado:'livre', reserva:null});
+  /* Lounge 1 */
+  M(3,'sofa',438,600); M(2,'sofa',438,695); M(1,'sofa',438,790);
+  M(4,'sofa',560,600); M(5,'sofa',560,695); M(6,'sofa',560,790);
+  /* Lounge 2 */
+  M(9,'sofa',838,600); M(8,'sofa',838,695); M(7,'sofa',838,790);
+  M(10,'sofa',960,600); M(11,'sofa',960,695); M(12,'sofa',960,790);
+  /* Luzes de discoteca */
+  M('Luz','luz',725,650); M('Luz','luz',725,820);
+  M('Luz','luz',300,468); M('Luz','luz',1150,452);
+  M('Luz','luz',1140,860); M('Luz','luz',390,860);
+  return {
+    clube:{nome:'O Meu Club', largura:1200, altura:900},
+    zonas:[
+      {id:uid('z'), nome:'Sunset',     x:16,  y:16,  w:1168, h:300},
+      {id:uid('z'), nome:'VIP Room 2', x:16,  y:332, w:190,  h:200},
+      {id:uid('z'), nome:'VIP Room 1', x:16,  y:548, w:190,  h:336},
+      {id:uid('z'), nome:'Mid 1',      x:222, y:332, w:962,  h:146},
+      {id:uid('z'), nome:'Lounge 1',   x:360, y:494, w:330,  h:390},
+      {id:uid('z'), nome:'Lounge 2',   x:760, y:494, w:330,  h:390},
+    ],
+    mesas
+  };
+}
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
+function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
+let state = load() || seed();
+state.mesas = (state.mesas||[]).filter(m => m.tipo!=='planta');
+let mode = 'servico';
+let sel = null;
+let multiMode = false;
+const multi = new Set();
+
+const $ = id => document.getElementById(id);
+const svg = $('floor');
+const findM = id => state.mesas.find(m => m.id===id);
+const findZ = id => state.zonas.find(z => z.id===id);
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const snap = v => Math.round(v/5)*5;
+
+/* dimensões visuais por tipo (centradas em 0,0) — m.w/m.h personalizam */
+function dims(m){
+  let b;
+  switch(m.tipo){
+    case 'redonda':    b = {w:66,h:66,round:true}; break;
+    case 'oval':       b = {w:98,h:64,round:true}; break;
+    case 'quadrada':   b = {w:62,h:62}; break;
+    case 'retangular': b = {w:112,h:58}; break;
+    case 'vip':        b = {w:84,h:188}; break;
+    case 'sofa':       b = {w:96,h:66}; break;
+    case 'sofa2':      b = {w:100,h:72}; break;
+    case 'luz':        b = {w:40,h:40,round:true}; break;
+    case 'dj':         b = {w:104,h:64}; break;
+    case 'texto':      b = {w:150,h:32}; break;
+    case 'portao':     b = {w:150,h:16}; break;
+    case 'porta':      b = {w:48,h:48}; break;
+    case 'parede':     b = {w:14,h:180}; break;
+    default:           b = {w:62,h:62};
+  }
+  return {w: m.w||b.w, h: m.h||b.h, round: !!b.round};
+}
+const trans = m => `translate(${m.x},${m.y}) rotate(${m.rot||0}) scale(${m.esc||1})`;
+
+/* ================= render (planta baixa dark / discoteca) ================= */
+function chair(x,y,rot){
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot})">
+    <ellipse cx="1" cy="1.5" rx="8.5" ry="9.5" fill="rgba(0,0,0,.45)"/>
+    <rect x="-7" y="-8" width="13" height="16" rx="4" fill="#262B35" stroke="#0B0F14" stroke-width="1"/>
+    <rect x="-5.5" y="-6.5" width="10" height="13" rx="3" fill="#D9CCA9"/>
+    <rect x="4.5" y="-8" width="3.5" height="16" rx="1.75" fill="#0B0F14"/>
+  </g>`;
+}
+/* distribuição de cadeiras por lado: c=cima, b=baixo, e=esquerda, d=direita */
+function cadDe(m){
+  if(m.cad) return m.cad;
+  const d = dims(m), n = Math.min(m.lugares,16);
+  const vert = d.h > d.w, nA = Math.ceil(n/2), nB = n - nA;
+  return vert ? {c:0,b:0,e:nA,d:nB} : {c:nA,b:nB,e:0,d:0};
+}
+function chairsSVG(m){
+  if(DECOR[m.tipo] || m.tipo==='sofa' || m.tipo==='sofa2' || m.tipo==='vip' || !m.lugares) return '';
+  const d = dims(m), n = Math.min(m.lugares,16), out = [];
+  if(d.round){
+    const Rx = d.w/2 + 14, Ry = d.h/2 + 14;
+    for(let i=0;i<n;i++){
+      const a = (i/n)*360 - 90, r = a*Math.PI/180;
+      out.push(chair(Rx*Math.cos(r), Ry*Math.sin(r), a));
+    }
+  } else {
+    const cad = cadDe(m), offY = d.h/2 + 14, offX = d.w/2 + 14;
+    const fila = (cnt, horiz, fixed, rot) => {
+      const len = (horiz ? d.w : d.h) - 12;
+      for(let i=0;i<cnt;i++){
+        const t = (i+1)/(cnt+1), p = -len/2 + t*len;
+        out.push(horiz ? chair(p, fixed, rot) : chair(fixed, p, rot));
+      }
+    };
+    fila(cad.c, true, -offY, -90);
+    fila(cad.b, true,  offY,  90);
+    fila(cad.e, false, -offX, 180);
+    fila(cad.d, false,  offX,   0);
+  }
+  return out.join('');
+}
+function prato(x,y){
+  return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.6" fill="#E8E1D2" stroke="#B8AE9A" stroke-width="1"/>
+    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="none" stroke="#CFC5AF" stroke-width="1"/>`;
+}
+function pratosSVG(m){
+  if(m.tipo!=='redonda' && m.tipo!=='quadrada' && m.tipo!=='retangular') return '';
+  const d = dims(m), n = Math.min(m.lugares,16), out = [];
+  if(d.round){
+    const Rx = d.w/2 - 12, Ry = d.h/2 - 12;
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2 - Math.PI/2;
+      out.push(prato(Rx*Math.cos(a), Ry*Math.sin(a)));
+    }
+  } else {
+    const cad = cadDe(m), inY = d.h/2 - 12, inX = d.w/2 - 12;
+    const fila = (cnt, horiz, fixed) => {
+      const len = (horiz ? d.w : d.h) - 12;
+      for(let i=0;i<cnt;i++){
+        const t = (i+1)/(cnt+1), p = -len/2 + t*len;
+        out.push(horiz ? prato(p, fixed) : prato(fixed, p));
+      }
+    };
+    fila(cad.c, true, -inY); fila(cad.b, true, inY);
+    fila(cad.e, false, -inX); fila(cad.d, false, inX);
+  }
+  return out.join('');
+}
+function corpoSVG(m){
+  const d = dims(m), w = d.w, h = d.h;
+  switch(m.tipo){
+    case 'redonda':
+    case 'oval': return `
+      <ellipse cy="5" rx="${(w/2+3.5).toFixed(1)}" ry="${(h/2+2.5).toFixed(1)}" fill="rgba(0,0,0,.5)"/>
+      <ellipse cy="3" rx="${w/2}" ry="${h/2}" fill="#0B0F14"/>
+      <ellipse class="rim" rx="${w/2}" ry="${h/2}" fill="url(#woodR)"/>
+      <circle r="16" fill="url(#luzG)"/>
+      ${pratosSVG(m)}`;
+    case 'quadrada':
+    case 'retangular': {
+      const luzes = w>90
+        ? `<circle cx="${-Math.round(w/4)}" r="14" fill="url(#luzG)"/><circle cx="${Math.round(w/4)}" r="14" fill="url(#luzG)"/>`
+        : `<circle r="16" fill="url(#luzG)"/>`;
+      return `
+      <rect x="${-w/2-1}" y="${-h/2+4}" width="${w+2}" height="${h+2}" rx="10" fill="rgba(0,0,0,.5)"/>
+      <rect x="${-w/2}" y="${-h/2+3}" width="${w}" height="${h}" rx="9" fill="#0B0F14"/>
+      <rect class="rim" x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="9" fill="url(#woodL)"/>
+      ${luzes}
+      ${pratosSVG(m)}`;
+    }
+    case 'sofa': {
+      const tw = Math.max(26, Math.round(w*0.35)), th = Math.max(20, Math.round(h*0.36));
+      return `
+      <ellipse cy="6" rx="${w/2+3}" ry="${h/2+4}" fill="rgba(0,0,0,.45)"/>
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="17" rx="8" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect x="${-w/2}" y="${-h/2}" width="15" height="${h-6}" rx="7.5" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect x="${w/2-15}" y="${-h/2}" width="15" height="${h-6}" rx="7.5" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <line x1="${-Math.round(w/6)}" y1="${-h/2+2}" x2="${-Math.round(w/6)}" y2="${-h/2+15}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${Math.round(w/6)}" y1="${-h/2+2}" x2="${Math.round(w/6)}" y2="${-h/2+15}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <rect x="${-tw/2}" y="${-th/2+9}" width="${tw}" height="${th}" rx="5" fill="#0B0F14"/>
+      <rect class="rim" x="${-tw/2}" y="${-th/2+6}" width="${tw}" height="${th}" rx="5" fill="url(#woodL)"/>
+      <circle cy="6" r="12" fill="url(#luzG)"/>`;
+    }
+    case 'sofa2': {
+      /* sofá de club em U — couro, sem mesa no meio */
+      const t = Math.max(16, Math.round(Math.min(w,h)*0.24));
+      return `
+      <ellipse cy="6" rx="${w/2+3}" ry="${h/2+4}" fill="rgba(0,0,0,.45)"/>
+      <rect class="sofa rim" x="${-w/2}" y="${-h/2}" width="${w}" height="${t}" rx="9" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect class="sofa rim" x="${-w/2}" y="${-h/2}" width="${t}" height="${h}" rx="9" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect class="sofa rim" x="${w/2-t}" y="${-h/2}" width="${t}" height="${h}" rx="9" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <line x1="${-Math.round(w/6)}" y1="${-h/2+2}" x2="${-Math.round(w/6)}" y2="${-h/2+t-2}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${Math.round(w/6)}" y1="${-h/2+2}" x2="${Math.round(w/6)}" y2="${-h/2+t-2}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${-w/2+2}" y1="${Math.round(h/6)}" x2="${-w/2+t-2}" y2="${Math.round(h/6)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${w/2-t+2}" y1="${Math.round(h/6)}" x2="${w/2-2}" y2="${Math.round(h/6)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <circle cy="${Math.round(h*0.14)}" r="13" fill="url(#luzG)"/>`;
+    }
+    case 'vip': {
+      const tw = Math.max(22, w-54);
+      return `
+      <ellipse cy="6" rx="${w/2+3}" ry="${h/2+3}" fill="rgba(0,0,0,.45)"/>
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="17" rx="8" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect x="${-w/2}" y="${-h/2}" width="15" height="${h-6}" rx="7.5" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <rect x="${w/2-15}" y="${-h/2}" width="15" height="${h-6}" rx="7.5" fill="url(#leather)" stroke="#2A0710" stroke-width="1.2"/>
+      <line x1="${-w/2+4}" y1="${-Math.round(h/4)}" x2="${-w/2+17}" y2="${-Math.round(h/4)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${w/2-17}" y1="${-Math.round(h/4)}" x2="${w/2-4}" y2="${-Math.round(h/4)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${-w/2+4}" y1="0" x2="${-w/2+17}" y2="0" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${w/2-17}" y1="0" x2="${w/2-4}" y2="0" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${-w/2+4}" y1="${Math.round(h/4)}" x2="${-w/2+17}" y2="${Math.round(h/4)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <line x1="${w/2-17}" y1="${Math.round(h/4)}" x2="${w/2-4}" y2="${Math.round(h/4)}" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
+      <rect x="${-tw/2}" y="${-h/2+31}" width="${tw}" height="${Math.max(30,h-46)}" rx="6" fill="#0B0F14"/>
+      <rect class="rim" x="${-tw/2}" y="${-h/2+28}" width="${tw}" height="${Math.max(30,h-46)}" rx="6" fill="url(#woodL)"/>
+      <circle cy="${-h/2+56}" r="10" fill="url(#luzG)"/>
+      <circle cy="${-h/2+56}" r="7" fill="#141A22" stroke="#9A9080" stroke-width="1.3"/>
+      <circle cy="${-h/2+56}" r="2.5" fill="#C9A227"/>
+      <circle cy="${h/2-60}" r="9" fill="url(#luzG)"/>
+      <circle cy="${h/2-60}" r="1.8" fill="#FFD98A"/>`;
+    }
+    case 'texto': {
+      /* texto livre — a letra cresce com a altura (canto dourado) e roda com o manípulo */
+      const fs = Math.max(10, Math.round(h*0.75));
+      return `
+      <rect class="tbx" x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="6" fill="rgba(0,0,0,0)"/>
+      <text class="ftxt" y="${Math.round(fs*0.34)}" style="font-size:${fs}px">${esc(m.label)}</text>`;
+    }
+    case 'parede': {
+      /* divisória interna — mesma pedra da parede exterior */
+      const r = Math.min(w/2, 6);
+      return `
+      <rect x="${-w/2-1}" y="${-h/2+4}" width="${w+2}" height="${h+2}" rx="${r}" fill="rgba(0,0,0,.55)"/>
+      <rect class="rim" x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="${r}" fill="#2A303D"/>`;
+    }
+    case 'portao': {
+      /* portão de vidro — duas folhas com pilares dourados */
+      return `
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="3" fill="rgba(143,212,232,.14)" stroke="#5C8FA3" stroke-width="1.5"/>
+      <rect x="${-w/2+4}" y="-2" width="${Math.max(6,w/2-7)}" height="4" rx="2" fill="rgba(143,212,232,.55)"/>
+      <rect x="3" y="-2" width="${Math.max(6,w/2-7)}" height="4" rx="2" fill="rgba(143,212,232,.55)"/>
+      <line x1="0" y1="${-h/2+2}" x2="0" y2="${h/2-2}" stroke="#5C8FA3" stroke-width="1.2"/>
+      <rect x="${-w/2-5}" y="${-h/2-2}" width="7" height="${h+4}" rx="2.5" fill="#C9A227"/>
+      <rect x="${w/2-2}" y="${-h/2-2}" width="7" height="${h+4}" rx="2.5" fill="#C9A227"/>`;
+    }
+    case 'porta': {
+      /* porta pequena — folha + arco de abertura (símbolo de planta) */
+      const R = Math.max(24, Math.min(w,h)-8);
+      return `
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" fill="rgba(0,0,0,0)"/>
+      <rect x="${-w/2-4}" y="${h/2-3}" width="8" height="8" rx="2" fill="#C9A227"/>
+      <rect x="${-w/2+R-2}" y="${h/2-3}" width="8" height="8" rx="2" fill="#C9A227"/>
+      <path d="M ${-w/2+5} ${h/2-R} A ${R} ${R} 0 0 1 ${-w/2+R} ${h/2}" fill="none" stroke="#5C7089" stroke-width="1.4" stroke-dasharray="4 3"/>
+      <rect x="${-w/2}" y="${h/2-R}" width="5" height="${R}" rx="2" fill="#D9CCA9" stroke="#8F8877" stroke-width="1"/>`;
+    }
+    case 'luz': {
+      const pool = ['spotG','spotM','spotC'][Math.abs(Math.round((m.x+m.y)/5))%3];
+      const R = Math.round(Math.max(w,h)/2 + 36);
+      return `
+      <circle r="${R}" fill="url(#${pool})" pointer-events="none"/>
+      <circle r="16" fill="rgba(0,0,0,0)"/>
+      <circle r="7" fill="#10141B" stroke="#C9A227" stroke-width="1.5"/>
+      <circle r="2.6" fill="#FFD98A"/>`;
+    }
+    case 'dj': {
+      const xo = Math.round(w-12), xi = Math.round(Math.max(14, w/2-22)), yb = Math.round(h/2-14);
+      return `
+      <polygon points="-10,${yb} ${-xo},${yb+134} ${-xi},${yb+134}" fill="url(#beamM)" pointer-events="none"/>
+      <polygon points="10,${yb} ${xi},${yb+134} ${xo},${yb+134}" fill="url(#beamC)" pointer-events="none"/>
+      <ellipse cy="${yb-4}" rx="${Math.round(w*0.69)}" ry="30" fill="url(#spotG)" pointer-events="none"/>
+      <ellipse cy="7" rx="${w/2+3}" ry="${h/2-1}" fill="rgba(0,0,0,.5)"/>
+      <rect x="${-w/2}" y="${-h/2+3}" width="${w}" height="${Math.max(30,h-18)}" rx="8" fill="#0B0F15"/>
+      <rect class="rim" x="${-w/2}" y="${-h/2}" width="${w}" height="${Math.max(30,h-18)}" rx="8" fill="url(#woodD)"/>
+      <circle cx="${-Math.round(w/2-24)}" cy="-8" r="12" fill="#0C0F14" stroke="#C9A227" stroke-width="1.5"/>
+      <circle cx="${-Math.round(w/2-24)}" cy="-8" r="3.4" fill="#C9A227"/>
+      <circle cx="${Math.round(w/2-24)}" cy="-8" r="12" fill="#0C0F14" stroke="#C9A227" stroke-width="1.5"/>
+      <circle cx="${Math.round(w/2-24)}" cy="-8" r="3.4" fill="#C9A227"/>
+      <rect x="-11" y="-17" width="22" height="20" rx="3" fill="#0C0F14" stroke="rgba(201,162,39,.45)" stroke-width="1"/>
+      <circle cx="-5.5" cy="-12" r="1.6" fill="#E14ECA"/><circle cx="0" cy="-12" r="1.6" fill="#3EC6E0"/><circle cx="5.5" cy="-12" r="1.6" fill="#C9A227"/>
+      <line x1="-5" y1="-7" x2="-5" y2="0" stroke="#9A9080" stroke-width="1.6"/>
+      <line x1="5" y1="-7" x2="5" y2="0" stroke="#9A9080" stroke-width="1.6"/>
+      <rect x="${-w/2+6}" y="${yb}" width="${Math.round(w-12)}" height="5" rx="2.5" fill="#06080C"/>`;
+    }
+    default: return '';
+  }
+}
+function mesaInner(m){
+  const d = dims(m);
+  const decor = !!DECOR[m.tipo];
+  const nome = m.reserva && m.reserva.nome ? m.reserva.nome : '';
+  const curto = nome.length>11 ? nome.slice(0,10)+'…' : nome;
+  const halo = (!decor && m.estado!=='livre')
+    ? `<ellipse rx="${(d.w/2+24).toFixed(0)}" ry="${(d.h/2+24).toFixed(0)}"
+        fill="url(#halo${m.estado==='reservada'?'R':'O'})" pointer-events="none"/>` : '';
+  let label = '';
+  if(m.tipo==='dj'){
+    label = `<g transform="rotate(${-(m.rot||0)})"><text class="num dj" y="34">${esc(m.label)}</text></g>`;
+  } else if(m.tipo==='sofa2'){
+    /* sofá em U: sem número no mapa — só o nome da reserva, se houver */
+    label = curto ? `<g transform="rotate(${-(m.rot||0)})"><text class="rnome" y="8">${esc(curto)}</text></g>` : '';
+  } else if(!decor){
+    const lw = Math.max(25, String(m.label).length*8.5 + 9);
+    label = `<g transform="rotate(${-(m.rot||0)})">
+      <rect class="chip3" x="${(-lw/2).toFixed(1)}" y="-12.5" width="${lw.toFixed(1)}" height="25" rx="12.5"/>
+      <text class="num" y="4.5">${esc(m.label)}</text>
+      ${curto?`<text class="rnome" y="27">${esc(curto)}</text>`:''}
+    </g>`;
+  }
+  const grip = `<circle class="mh" cx="${(d.w/2+15).toFixed(0)}" cy="${(d.h/2+15).toFixed(0)}" r="9"/>`;
+  const roda = `<line class="mrl" x1="0" y1="${(-d.h/2-8).toFixed(0)}" x2="0" y2="${(-d.h/2-26).toFixed(0)}"/>
+    <circle class="mr" cx="0" cy="${(-d.h/2-32).toFixed(0)}" r="9"/>`;
+  return `${halo}${chairsSVG(m)}${corpoSVG(m)}${label}${grip}${roda}`;
+}
+function mesaSVG(m){
+  const decor = !!DECOR[m.tipo];
+  const cls = 'mesa ' + (decor ? m.tipo : m.estado) + (sel===m.id?' sel':'') + (multi.has(m.id)?' msel':'');
+  return `<g class="${cls}" data-id="${m.id}" transform="${trans(m)}">${mesaInner(m)}</g>`;
+}
+function zonaSVG(z){
+  return `<g class="zona${multi.has(z.id)?' msel':''}" data-id="${z.id}">
+    <rect class="zr" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="8"/>
+    <rect class="zi" x="${z.x+8}" y="${z.y+8}" width="${Math.max(4,z.w-16)}" height="${Math.max(4,z.h-16)}" rx="5"/>
+    <text x="${z.x+16}" y="${z.y+27}">${esc(z.nome)}</text>
+    <rect class="rh" data-rh="${z.id}" x="${z.x+z.w-9}" y="${z.y+z.h-9}" width="18" height="18" rx="4"/>
+  </g>`;
+}
+let VB = {x:0, y:0, w:1200, h:900};
+function render(){
+  const c = state.clube, PAD = 52, W = 20; /* W = espessura da parede */
+  VB = {x:-PAD, y:-PAD, w:c.largura+2*PAD, h:c.altura+2*PAD};
+  svg.setAttribute('viewBox', `${VB.x} ${VB.y} ${VB.w} ${VB.h}`);
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  /* escala: encaixa como antes até à altura base (1200); acima disso mantém o tamanho e faz scroll */
+  const st = $('stage'), refH = Math.min(VB.h, 1200 + 2*PAD);
+  const s = Math.min(st.clientWidth / VB.w, st.clientHeight / refH) || 1;
+  svg.style.width = (VB.w * s) + 'px';
+  svg.style.height = (VB.h * s) + 'px';
+  svg.innerHTML = `
+    <defs>
+      <radialGradient id="fundo" cx="50%" cy="40%" r="80%">
+        <stop offset="0%" stop-color="#141926"/><stop offset="100%" stop-color="#06080C"/>
+      </radialGradient>
+      <pattern id="tile" width="52" height="52" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="52" height="52" fill="#161C26"/>
+        <path d="M0 0H52M0 26H52M0 0V52M26 0V52" stroke="#1E2632" stroke-width="1.4" fill="none"/>
+      </pattern>
+      <radialGradient id="woodR" cx="35%" cy="30%" r="85%">
+        <stop offset="0%" stop-color="#3A3F4C"/><stop offset="55%" stop-color="#23262F"/><stop offset="100%" stop-color="#181B22"/>
+      </radialGradient>
+      <linearGradient id="woodL" x1="0" y1="0" x2="0.4" y2="1">
+        <stop offset="0%" stop-color="#343945"/><stop offset="100%" stop-color="#1C1F27"/>
+      </linearGradient>
+      <linearGradient id="woodD" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#262D38"/><stop offset="100%" stop-color="#10141B"/>
+      </linearGradient>
+      <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#6E1423"/><stop offset="100%" stop-color="#420C16"/>
+      </linearGradient>
+      <radialGradient id="luzG">
+        <stop offset="0%" stop-color="#FFC66B" stop-opacity=".5"/>
+        <stop offset="100%" stop-color="#FFC66B" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="spotG">
+        <stop offset="0%" stop-color="#FFD98A" stop-opacity=".4"/>
+        <stop offset="55%" stop-color="#FFD98A" stop-opacity=".14"/>
+        <stop offset="100%" stop-color="#FFD98A" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="spotM">
+        <stop offset="0%" stop-color="#E14ECA" stop-opacity=".42"/>
+        <stop offset="55%" stop-color="#E14ECA" stop-opacity=".15"/>
+        <stop offset="100%" stop-color="#E14ECA" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="spotC">
+        <stop offset="0%" stop-color="#3EC6E0" stop-opacity=".4"/>
+        <stop offset="55%" stop-color="#3EC6E0" stop-opacity=".14"/>
+        <stop offset="100%" stop-color="#3EC6E0" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="beamM" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#E14ECA" stop-opacity=".38"/>
+        <stop offset="100%" stop-color="#E14ECA" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="beamC" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3EC6E0" stop-opacity=".34"/>
+        <stop offset="100%" stop-color="#3EC6E0" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="haloR">
+        <stop offset="0%" stop-color="#E5A33C" stop-opacity=".55"/>
+        <stop offset="55%" stop-color="#E5A33C" stop-opacity=".2"/>
+        <stop offset="100%" stop-color="#E5A33C" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="haloO">
+        <stop offset="0%" stop-color="#FF5C6C" stop-opacity=".55"/>
+        <stop offset="55%" stop-color="#FF5C6C" stop-opacity=".2"/>
+        <stop offset="100%" stop-color="#FF5C6C" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect x="${VB.x}" y="${VB.y}" width="${VB.w}" height="${VB.h}" fill="url(#fundo)"/>
+    <rect x="${-W+7}" y="${-W+12}" width="${c.largura+2*W}" height="${c.altura+2*W}" rx="7" fill="rgba(0,0,0,.6)"/>
+    <rect x="${-W}" y="${-W}" width="${c.largura+2*W}" height="${c.altura+2*W}" rx="6" fill="#2A303D" stroke="#414B5C" stroke-width="2"/>
+    <rect x="0" y="0" width="${c.largura}" height="${c.altura}" fill="url(#tile)" stroke="#0C0F14" stroke-width="1.5"/>
+    <rect x="4" y="4" width="${c.largura-8}" height="${c.altura-8}" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="7"/>
+    ${state.zonas.map(zonaSVG).join('')}
+    ${state.mesas.map(mesaSVG).join('')}`;
+  svg.querySelectorAll('g.mesa').forEach(bindMesa);
+  svg.querySelectorAll('g.zona').forEach(bindZona);
+  $('clubname').textContent = c.nome;
+  document.title = c.nome;
+  const cnt = {livre:0,reservada:0,ocupada:0};
+  state.mesas.forEach(m => { if(!DECOR[m.tipo]) cnt[m.estado] = (cnt[m.estado]||0)+1; });
+  $('c-livre').textContent = cnt.livre; $('c-res').textContent = cnt.reservada; $('c-ocu').textContent = cnt.ocupada;
+  if(multiMode) $('btn-multi').textContent = `☑ Vários (${multi.size})`;
+}
+
+/* ================= interação (arrastar / tocar) ================= */
+function svgPt(e){
+  const r = svg.getBoundingClientRect();
+  const s = Math.min(r.width/VB.w, r.height/VB.h);
+  const ox = (r.width - VB.w*s)/2, oy = (r.height - VB.h*s)/2;
+  return { x:(e.clientX-r.left-ox)/s + VB.x, y:(e.clientY-r.top-oy)/s + VB.y };
+}
+/* arrastar no fundo vazio = scroll vertical da planta */
+svg.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const stage = $('stage'), sy = e.clientY, st0 = stage.scrollTop;
+  svg.setPointerCapture(e.pointerId);
+  const mv = ev => { stage.scrollTop = st0 - (ev.clientY - sy); };
+  const up = () => { svg.removeEventListener('pointermove',mv); svg.removeEventListener('pointerup',up); svg.removeEventListener('pointercancel',up); };
+  svg.addEventListener('pointermove',mv); svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+});
+/* --- helpers de seleção múltipla (mesas + zonas) --- */
+function syncZonaEl(g, z){
+  const r = g.querySelector('.zr'), zi = g.querySelector('.zi'), t = g.querySelector('text'), rh = g.querySelector('.rh');
+  r.setAttribute('x',z.x); r.setAttribute('y',z.y);
+  r.setAttribute('width',z.w); r.setAttribute('height',z.h);
+  zi.setAttribute('x',z.x+8); zi.setAttribute('y',z.y+8);
+  zi.setAttribute('width',Math.max(4,z.w-16)); zi.setAttribute('height',Math.max(4,z.h-16));
+  t.setAttribute('x',z.x+16); t.setAttribute('y',z.y+27);
+  rh.setAttribute('x',z.x+z.w-9); rh.setAttribute('y',z.y+z.h-9);
+}
+function buildGrupo(){
+  const items = [];
+  state.mesas.forEach(x => { if(multi.has(x.id)) items.push({t:'m', ref:x, x0:x.x, y0:x.y, el: svg.querySelector(`g.mesa[data-id="${x.id}"]`)}); });
+  state.zonas.forEach(z => { if(multi.has(z.id)) items.push({t:'z', ref:z, x0:z.x, y0:z.y, el: svg.querySelector(`g.zona[data-id="${z.id}"]`)}); });
+  return items;
+}
+function moveGrupo(items, dx, dy){
+  items.forEach(s => {
+    s.ref.x = snap(s.x0 + dx); s.ref.y = snap(s.y0 + dy);
+    if(!s.el) return;
+    if(s.t==='m') s.el.setAttribute('transform', trans(s.ref));
+    else syncZonaEl(s.el, s.ref);
+  });
+}
+function bindMesa(g){
+  g.addEventListener('pointerdown', e => {
+    const isGrip = e.target && e.target.classList && e.target.classList.contains('mh');
+    const isRot  = e.target && e.target.classList && e.target.classList.contains('mr');
+    if(isRot && mode==='editar'){
+      /* rodar à mão: arrasta em círculo, encaixa a cada 15° */
+      e.preventDefault(); e.stopPropagation();
+      const m = findM(g.dataset.id); if(!m) return;
+      const p0 = svgPt(e);
+      const a0 = Math.atan2(p0.y - m.y, p0.x - m.x), r0 = m.rot||0;
+      g.setPointerCapture(e.pointerId);
+      const mv = ev => {
+        const p = svgPt(ev);
+        const a = Math.atan2(p.y - m.y, p.x - m.x);
+        let deg = r0 + (a - a0)*180/Math.PI;
+        deg = Math.round(deg/15)*15;
+        m.rot = ((deg % 360) + 360) % 360;
+        g.setAttribute('transform', trans(m));
+      };
+      const up = () => {
+        g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+        save(); render();
+      };
+      g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+      return;
+    }
+    if(isRot) return;
+    if(isGrip && mode==='editar'){
+      /* redimensionar: puxar o canto estica largura/comprimento, como nas zonas */
+      e.preventDefault(); e.stopPropagation();
+      const m = findM(g.dataset.id); if(!m) return;
+      const p0 = svgPt(e), d0 = dims(m), ow = d0.w, oh = d0.h;
+      const th = (m.rot||0)*Math.PI/180, sc = m.esc||1;
+      g.setPointerCapture(e.pointerId);
+      const mv = ev => {
+        const p = svgPt(ev);
+        const dx = p.x-p0.x, dy = p.y-p0.y;
+        const lx = (dx*Math.cos(th) + dy*Math.sin(th))/sc;
+        const ly = (-dx*Math.sin(th) + dy*Math.cos(th))/sc;
+        m.w = Math.min(700, Math.max(10, snap(ow + lx*2)));
+        m.h = Math.min(700, Math.max(10, snap(oh + ly*2)));
+        g.innerHTML = mesaInner(m);
+      };
+      const up = () => {
+        g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+        save(); render();
+      };
+      g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+      return;
+    }
+    if(isGrip) return;
+    e.preventDefault(); e.stopPropagation();
+    const m = findM(g.dataset.id); if(!m) return;
+    const p0 = svgPt(e), sx = e.clientX, sy = e.clientY, ox = m.x, oy = m.y;
+    /* seleção múltipla: arrastar um item marcado move o grupo todo junto */
+    const grupo = (mode==='editar' && multiMode && multi.has(m.id)) ? buildGrupo() : null;
+    const soloOk = !(mode==='editar' && multiMode);
+    let moved = false;
+    g.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      if(Math.hypot(ev.clientX-sx, ev.clientY-sy) > 9) moved = true;
+      if(moved && mode==='editar'){
+        const p = svgPt(ev), dx = p.x - p0.x, dy = p.y - p0.y;
+        if(grupo){
+          moveGrupo(grupo, dx, dy);
+        } else if(soloOk){
+          m.x = snap(ox + dx); m.y = snap(oy + dy);
+          g.setAttribute('transform', trans(m));
+        }
+      }
+    };
+    const up = () => {
+      g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+      if(moved && mode==='editar' && (grupo || soloOk)){ save(); render(); }
+      else if(!moved){ tapMesa(m); }
+    };
+    g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  });
+}
+function bindZona(g){
+  const z = findZ(g.dataset.id); if(!z) return;
+  const rh = g.querySelector('.rh');
+  const sync = () => {
+    const r = g.querySelector('.zr'), zi = g.querySelector('.zi'), t = g.querySelector('text');
+    r.setAttribute('x',z.x); r.setAttribute('y',z.y);
+    r.setAttribute('width',z.w); r.setAttribute('height',z.h);
+    zi.setAttribute('x',z.x+8); zi.setAttribute('y',z.y+8);
+    zi.setAttribute('width',Math.max(4,z.w-16)); zi.setAttribute('height',Math.max(4,z.h-16));
+    t.setAttribute('x',z.x+16); t.setAttribute('y',z.y+27);
+    rh.setAttribute('x',z.x+z.w-9); rh.setAttribute('y',z.y+z.h-9);
+  };
+  rh.addEventListener('pointerdown', e => {
+    if(mode!=='editar') return;
+    e.preventDefault(); e.stopPropagation();
+    const p0 = svgPt(e), ow = z.w, oh = z.h;
+    rh.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      const p = svgPt(ev);
+      z.w = Math.max(80, snap(ow + p.x - p0.x));
+      z.h = Math.max(60, snap(oh + p.y - p0.y));
+      sync();
+    };
+    const up = () => { rh.removeEventListener('pointermove',mv); rh.removeEventListener('pointerup',up); rh.removeEventListener('pointercancel',up); save(); render(); };
+    rh.addEventListener('pointermove',mv); rh.addEventListener('pointerup',up); rh.addEventListener('pointercancel',up);
+  });
+  g.addEventListener('pointerdown', e => {
+    if(mode!=='editar' || e.target===rh) return;
+    e.preventDefault(); e.stopPropagation();
+    const p0 = svgPt(e), sx = e.clientX, sy = e.clientY, ox = z.x, oy = z.y;
+    const grupo = (multiMode && multi.has(z.id)) ? buildGrupo() : null;
+    const soloOk = !multiMode;
+    let moved = false;
+    g.setPointerCapture(e.pointerId);
+    const mv = ev => {
+      if(Math.hypot(ev.clientX-sx, ev.clientY-sy) > 9) moved = true;
+      if(moved){
+        const p = svgPt(ev), dx = p.x - p0.x, dy = p.y - p0.y;
+        if(grupo){ moveGrupo(grupo, dx, dy); }
+        else if(soloOk){ z.x = snap(ox + dx); z.y = snap(oy + dy); sync(); }
+      }
+    };
+    const up = () => {
+      g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+      if(moved && (grupo || soloOk)){ save(); render(); }
+      else if(!moved){
+        if(multiMode){
+          if(multi.has(z.id)) multi.delete(z.id); else multi.add(z.id);
+          render();
+        } else sheetZona(z.id);
+      }
+    };
+    g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  });
+}
+function tapMesa(m){
+  if(mode==='editar'){
+    if(multiMode){
+      if(multi.has(m.id)) multi.delete(m.id); else multi.add(m.id);
+      render(); return;
+    }
+    sheetEditarMesa(m.id); return;
+  }
+  if(DECOR[m.tipo]) return;
+  sheetServico(m.id);
+}
+function toggleMulti(){
+  multiMode = !multiMode; multi.clear(); sel = null;
+  const b = $('btn-multi');
+  b.classList.toggle('gold', multiMode);
+  b.textContent = multiMode ? '☑ Vários (0)' : '☑ Vários';
+  render();
+  toast(multiMode ? 'Toca nas mesas para marcar; depois arrasta uma delas — movem todas juntas' : 'Seleção múltipla desligada');
+}
+
+/* ================= folha inferior ================= */
+function openSheet(html){ $('sheet').innerHTML = html; $('sheet').classList.add('open'); $('scrim').classList.add('open'); }
+function closeSheet(){ $('sheet').classList.remove('open'); $('scrim').classList.remove('open'); sel = null; render(); }
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+const ESTADO_PT = {livre:'Livre', reservada:'Reservada', ocupada:'Ocupada'};
+
+/* horas em formato 24h — dia completo */
+function horaOptions(cur){
+  const seq = [];
+  for(let h=0; h<24; h++)
+    ['00','30'].forEach(mi => seq.push(String(h).padStart(2,'0')+':'+mi));
+  let out = `<option value="">— sem hora —</option>`;
+  if(cur && !seq.includes(cur)) out += `<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  seq.forEach(t => out += `<option value="${t}" ${t===cur?'selected':''}>${t}</option>`);
+  return out;
+}
+
+/* ---- serviço: reservas ---- */
+function sheetServico(id){
+  const m = findM(id); if(!m) return;
+  sel = id; render();
+  const r = m.reserva || {};
+  let acts = '';
+  if(m.estado==='livre'){
+    acts = `<button class="btn gold" onclick="actReservar('${id}')">Guardar reserva</button>
+            <button class="btn red" onclick="actOcupar('${id}')">Ocupar já (walk-in)</button>`;
+  } else if(m.estado==='reservada'){
+    acts = `<button class="btn green" onclick="actCheckin('${id}')">✓ Check-in — chegou</button>
+            <button class="btn" onclick="actGuardarAlt('${id}')">Guardar alterações</button>
+            <button class="btn red ghost" onclick="actLibertar('${id}', true)">Cancelar reserva</button>`;
+  } else {
+    acts = `<button class="btn" onclick="actGuardarAlt('${id}')">Guardar alterações</button>
+            <button class="btn red" onclick="actLibertar('${id}', false)">Libertar mesa</button>`;
+  }
+  openSheet(`
+    <div class="sh-head">
+      <div><h2>Mesa ${esc(m.label)}</h2><div class="sub">${DEF[m.tipo].nome} · ${m.lugares} lugares</div></div>
+      <span class="badge ${m.estado}">${ESTADO_PT[m.estado]}</span>
+    </div>
+    <div class="frm">
+      <label class="fld full">Nome de quem reservou
+        <input id="f-nome" value="${esc(r.nome)}" placeholder="Ex.: Sr. Carlos" autocomplete="off"></label>
+      <label class="fld">Telefone
+        <input id="f-tel" value="${esc(r.tel)}" inputmode="tel" placeholder="84 000 0000"></label>
+      <label class="fld">Nº de pessoas
+        <input id="f-pax" value="${esc(r.pax)}" inputmode="numeric" placeholder="${m.lugares}"></label>
+      <label class="fld">Hora prevista
+        <select id="f-hora">${horaOptions(r.hora)}</select></label>
+      <label class="fld">Consumo mín. / nota
+        <input id="f-nota" value="${esc(r.nota)}" placeholder="Ex.: 2 garrafas"></label>
+    </div>
+    <div class="acts">${acts}</div>`);
+}
+function lerForm(){
+  return {
+    nome: $('f-nome').value.trim(), tel: $('f-tel').value.trim(),
+    pax: $('f-pax').value.trim(), hora: $('f-hora').value, nota: $('f-nota').value.trim()
+  };
+}
+function actReservar(id){
+  const m = findM(id), r = lerForm();
+  if(!r.nome){ toast('Indica o nome de quem reservou'); $('f-nome').focus(); return; }
+  m.reserva = r; m.estado = 'reservada'; save(); closeSheet();
+  toast(`Mesa ${m.label} reservada para ${r.nome}`);
+}
+function actOcupar(id){
+  const m = findM(id), r = lerForm();
+  m.reserva = r.nome ? r : null; m.estado = 'ocupada'; save(); closeSheet();
+  toast(`Mesa ${m.label} ocupada`);
+}
+function actCheckin(id){
+  const m = findM(id); m.reserva = lerForm(); m.estado = 'ocupada'; save(); closeSheet();
+  toast(`Check-in feito — mesa ${m.label}`);
+}
+function actGuardarAlt(id){
+  const m = findM(id); m.reserva = lerForm(); save(); closeSheet();
+  toast('Alterações guardadas');
+}
+function actLibertar(id, cancelar){
+  const m = findM(id);
+  m.estado = 'livre'; m.reserva = null; save(); closeSheet();
+  toast(cancelar ? `Reserva da mesa ${m.label} cancelada` : `Mesa ${m.label} livre`);
+}
+
+/* ---- edição de mesas ---- */
+function sheetEditarMesa(id){
+  const m = findM(id); if(!m) return;
+  sel = id; render();
+  const ops = Object.keys(DEF).map(t =>
+    `<option value="${t}" ${m.tipo===t?'selected':''}>${DEF[t].nome}</option>`).join('');
+  const rectT = (m.tipo==='quadrada' || m.tipo==='retangular');
+  const cad = cadDe(m);
+  const cadeiras = rectT
+    ? `<label class="fld">Cadeiras · cima
+        <input id="e-cc" value="${cad.c}" inputmode="numeric"></label>
+      <label class="fld">Cadeiras · baixo
+        <input id="e-cb" value="${cad.b}" inputmode="numeric"></label>
+      <label class="fld">Cadeiras · esquerda
+        <input id="e-ce" value="${cad.e}" inputmode="numeric"></label>
+      <label class="fld">Cadeiras · direita
+        <input id="e-cd" value="${cad.d}" inputmode="numeric"></label>`
+    : `<label class="fld">Lugares
+        <input id="e-lug" value="${m.lugares}" inputmode="numeric"></label>`;
+  openSheet(`
+    <div class="sh-head">
+      <div><h2>Editar — ${esc(m.label)}</h2><div class="sub">Arrasta a mesa para mover · puxa o ponto dourado no canto para ampliar/reduzir${rectT?' · 0 cadeiras = mesa livre':''}</div></div>
+    </div>
+    <div class="frm">
+      <label class="fld">Número / nome
+        <input id="e-label" value="${esc(m.label)}" autocomplete="off"></label>
+      <label class="fld">Tipo de mesa
+        <select id="e-tipo">${ops}</select></label>
+      ${cadeiras}
+    </div>
+    <div class="acts">
+      <button class="btn gold" onclick="actMesaGuardar('${id}')">Guardar</button>
+      <button class="btn" onclick="actMesaRodar('${id}',1)">⟳ Rodar</button>
+      <button class="btn" onclick="actMesaTamOrig('${id}')">↺ Tamanho original</button>
+      <button class="btn" onclick="actMesaDuplicar('${id}')">Duplicar</button>
+      <button class="btn red ghost" onclick="actMesaEliminar('${id}')">Eliminar</button>
+    </div>`);
+}
+function actMesaGuardar(id){
+  const m = findM(id);
+  m.label = $('e-label').value.trim() || m.label;
+  m.tipo = $('e-tipo').value;
+  if($('e-cc')){
+    const v = x => Math.min(9, Math.max(0, parseInt($(x).value,10) || 0));
+    m.cad = {c:v('e-cc'), b:v('e-cb'), e:v('e-ce'), d:v('e-cd')};
+    m.lugares = m.cad.c + m.cad.b + m.cad.e + m.cad.d;
+  } else {
+    const lv = parseInt($('e-lug').value,10);
+    m.lugares = isNaN(lv) ? m.lugares : Math.max(0, lv);
+    delete m.cad;
+  }
+  save(); closeSheet(); toast('Mesa atualizada');
+}
+function actMesaTamOrig(id){
+  const m = findM(id);
+  delete m.w; delete m.h; m.esc = 1;
+  sel = id; save(); render();
+  toast('Tamanho original reposto');
+}
+function actMesaRodar(id, dir){
+  const m = findM(id);
+  m.rot = ((m.rot||0) + (dir||1)*90 + 360) % 360;
+  sel = id; save(); render();
+}
+function actMesaDuplicar(id){
+  const m = findM(id);
+  const n = JSON.parse(JSON.stringify(m));
+  n.id = uid('m'); n.x += 60; n.y += 60; n.estado='livre'; n.reserva=null;
+  const num = parseInt(m.label,10);
+  if(!isNaN(num)) n.label = String(proximoNumero());
+  state.mesas.push(n); save(); closeSheet(); toast('Mesa duplicada');
+}
+function actMesaEliminar(id){
+  const m = findM(id);
+  if(!confirm(`Eliminar a mesa ${m.label}?`)) return;
+  state.mesas = state.mesas.filter(x => x.id!==id); save(); closeSheet(); toast('Mesa eliminada');
+}
+function proximoNumero(){
+  let mx = 0;
+  state.mesas.forEach(m => { const n = parseInt(m.label,10); if(!isNaN(n) && n>mx) mx = n; });
+  return mx+1;
+}
+
+/* ---- nova mesa ---- */
+let novoTipo = 'redonda';
+function sheetNovaMesa(){
+  novoTipo = 'redonda';
+  openSheet(`
+    <div class="sh-head"><div><h2>Nova mesa</h2><div class="sub">Aparece no centro — depois arrasta para o sítio</div></div></div>
+    <div class="tipos" id="tiposel">
+      ${Object.keys(DEF).map(t =>
+        `<button data-t="${t}" class="${t===novoTipo?'on':''}" onclick="pickTipo('${t}')">${DEF[t].nome}</button>`).join('')}
+    </div>
+    <div class="frm">
+      <label class="fld">Número / nome
+        <input id="n-label" value="${proximoNumero()}" autocomplete="off"></label>
+      <label class="fld">Lugares
+        <input id="n-lug" value="${DEF[novoTipo].lugares}" inputmode="numeric"></label>
+    </div>
+    <div class="acts"><button class="btn gold" onclick="actNovaMesa()">Adicionar mesa</button></div>`);
+}
+function pickTipo(t){
+  novoTipo = t;
+  document.querySelectorAll('#tiposel button').forEach(b => b.classList.toggle('on', b.dataset.t===t));
+  $('n-lug').value = DEF[t].lugares;
+  if(t==='dj') $('n-label').value = 'DJ';
+  if(t==='luz') $('n-label').value = 'Luz';
+  if(t==='texto') $('n-label').value = 'O MEU TEXTO';
+  if(t==='portao') $('n-label').value = 'Portão';
+  if(t==='porta') $('n-label').value = 'Porta';
+  if(t==='parede') $('n-label').value = 'Parede';
+}
+function actNovaMesa(){
+  const c = state.clube;
+  state.mesas.push({
+    id:uid('m'), label:$('n-label').value.trim() || String(proximoNumero()),
+    tipo:novoTipo, x:snap(c.largura/2), y:snap(c.altura/2), rot:0, esc:1,
+    lugares:(function(){ const lv = parseInt($('n-lug').value,10); return isNaN(lv) ? DEF[novoTipo].lugares : Math.max(0, lv); })(),
+    estado:'livre', reserva:null
+  });
+  save(); closeSheet(); toast('Adicionado ao centro do mapa');
+}
+
+/* ---- zonas ---- */
+function novaZona(){
+  const c = state.clube;
+  state.zonas.push({id:uid('z'), nome:'Nova zona', x:snap(c.largura/2-160), y:snap(c.altura/2-110), w:320, h:220});
+  save(); render(); toast('Zona adicionada — arrasta e redimensiona pelo canto');
+}
+function sheetZona(id){
+  const z = findZ(id); if(!z) return;
+  openSheet(`
+    <div class="sh-head"><div><h2>Zona</h2><div class="sub">Arrasta a zona; o quadrado no canto redimensiona</div></div></div>
+    <div class="frm"><label class="fld full">Nome da zona
+      <input id="z-nome" value="${esc(z.nome)}" autocomplete="off"></label></div>
+    <div class="acts">
+      <button class="btn gold" onclick="actZonaGuardar('${id}')">Guardar</button>
+      <button class="btn red ghost" onclick="actZonaEliminar('${id}')">Eliminar zona</button>
+    </div>`);
+}
+function actZonaGuardar(id){
+  const z = findZ(id); z.nome = $('z-nome').value.trim() || z.nome;
+  save(); closeSheet(); toast('Zona atualizada');
+}
+function actZonaEliminar(id){
+  const z = findZ(id);
+  if(!confirm(`Eliminar a zona "${z.nome}"? (as mesas ficam)`)) return;
+  state.zonas = state.zonas.filter(x => x.id!==id); save(); closeSheet(); toast('Zona eliminada');
+}
+
+/* ---- dimensões / definições ---- */
+function sheetDimensoes(){
+  const c = state.clube;
+  openSheet(`
+    <div class="sh-head"><div><h2>O club</h2><div class="sub">Nome e proporções da planta</div></div></div>
+    <div class="frm">
+      <label class="fld full">Nome do club
+        <input id="d-nome" value="${esc(c.nome)}" autocomplete="off"></label>
+      <label class="fld">Largura (unidades)
+        <input id="d-w" value="${c.largura}" inputmode="numeric"></label>
+      <label class="fld">Altura (unidades)
+        <input id="d-h" value="${c.altura}" inputmode="numeric"></label>
+    </div>
+    <div class="acts"><button class="btn gold" onclick="actDimensoes()">Guardar</button></div>`);
+}
+function actDimensoes(){
+  const c = state.clube;
+  c.nome = $('d-nome').value.trim() || c.nome;
+  c.largura = Math.max(400, parseInt($('d-w').value,10) || c.largura);
+  c.altura = Math.max(300, parseInt($('d-h').value,10) || c.altura);
+  save(); closeSheet(); toast('Planta atualizada');
+}
+
+/* ---- menu ---- */
+function openMenu(){
+  openSheet(`
+    <div class="sh-head"><div><h2>Menu</h2><div class="sub">${esc(state.clube.nome)}</div></div></div>
+    <div class="menu-list">
+      <button class="btn" onclick="sheetReservas()">📋 Lista de reservas da noite</button>
+      <button class="btn" onclick="actLimparNoite()">🌙 Nova noite — limpar todas as reservas</button>
+      <button class="btn" onclick="actExportar()">⬇ Exportar planta (ficheiro)</button>
+      <button class="btn" onclick="$('importfile').click()">⬆ Importar planta</button>
+      <button class="btn ghost" onclick="actRepor()">Repor planta de exemplo</button>
+      <button class="btn red ghost" onclick="actVazia()">Começar do zero (planta vazia)</button>
+    </div>`);
+}
+function sheetReservas(){
+  const rs = state.mesas.filter(m => !DECOR[m.tipo] && m.estado!=='livre');
+  rs.sort((a,b) => ((a.reserva&&a.reserva.hora)||'99').localeCompare((b.reserva&&b.reserva.hora)||'99'));
+  const rows = rs.map(m => {
+    const r = m.reserva || {};
+    return `<div class="rrow ${m.estado}" onclick="sheetServico('${m.id}')">
+      <span class="rn">${esc(m.label)}</span>
+      <span class="ri"><b>${esc(r.nome || '(sem nome)')}</b>
+        <span>${esc(r.pax ? r.pax+' pessoas' : '')}${r.pax && r.nota ? ' · ' : ''}${esc(r.nota||'')}</span></span>
+      <time>${esc(r.hora || '—')}</time>
+    </div>`;
+  }).join('');
+  openSheet(`
+    <div class="sh-head"><div><h2>Reservas da noite</h2>
+      <div class="sub">${rs.length ? rs.length + ' mesa(s) com reserva ou ocupada(s)' : ''}</div></div></div>
+    <div class="rlist">${rows || '<div class="empty">Ainda não há reservas esta noite.</div>'}</div>`);
+}
+function actLimparNoite(){
+  if(!confirm('Limpar todas as reservas e pôr todas as mesas livres?')) return;
+  state.mesas.forEach(m => { m.estado='livre'; m.reserva=null; });
+  save(); closeSheet(); toast('Todas as mesas livres — boa noite de trabalho! 🥂');
+}
+function actExportar(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.clube.nome||'club').toLowerCase().replace(/\s+/g,'-') + '-planta.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Planta exportada');
+}
+$('importfile').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const s = JSON.parse(rd.result);
+      if(!s.clube || !Array.isArray(s.mesas)) throw 0;
+      state = s;
+      state.mesas = state.mesas.filter(m => m.tipo!=='planta');
+      save(); closeSheet(); render(); toast('Planta importada');
+    }catch(err){ toast('Ficheiro inválido'); }
+  };
+  rd.readAsText(f); e.target.value = '';
+});
+function actRepor(){
+  if(!confirm('Repor a planta de exemplo? A planta atual será substituída.')) return;
+  state = seed(); save(); closeSheet(); render(); toast('Planta de exemplo carregada');
+}
+function actVazia(){
+  if(!confirm('Começar do zero com uma planta vazia?')) return;
+  state = {clube:{nome:'O Meu Club', largura:1200, altura:900}, zonas:[], mesas:[]};
+  save(); closeSheet(); render(); setMode('editar');
+  toast('Planta vazia — usa ＋ Mesa e ＋ Zona para montar');
+}
+
+/* ================= modo ================= */
+function setMode(m){
+  mode = m; sel = null;
+  multiMode = false; multi.clear();
+  const bm = $('btn-multi');
+  if(bm){ bm.classList.remove('gold'); bm.textContent = '☑ Vários'; }
+  document.body.classList.toggle('editar', m==='editar');
+  $('m-servico').classList.toggle('on', m==='servico');
+  $('m-editar').classList.toggle('on', m==='editar');
+  closeSheet();
+}
+
+window.addEventListener('resize', render);
+render();
+</script>

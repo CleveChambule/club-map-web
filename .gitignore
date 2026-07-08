@@ -1,0 +1,8 @@
+# NUNCA enviar — chave de assinatura Android e passwords
+clubmap-release.keystore
+CHAVE-ASSINATURA-LEIA-ME.txt
+*.keystore
+
+# local
+.claude/
+ngrok.md

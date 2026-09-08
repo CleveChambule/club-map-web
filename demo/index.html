@@ -262,7 +262,7 @@ function stats() {
 /* ============ navegação ============ */
 let vista = 'painel', filtroMesas = 'todas', pesquisaCli = '', cliSel = '845123401', arquivoAberto = false, noiteIdx = 0, periodoCaixa = 'hoje', mesasExpandido = false;
 /* a demo desativa-se sozinha a partir desta data (ajustar ao publicar: dia de publicação + 10) */
-const DEMO_EXPIRA = '2026-09-06';
+const DEMO_EXPIRA = '2026-09-18';
 document.querySelectorAll('#nav .it').forEach(it => it.addEventListener('click', () => {
   const v = it.dataset.v;
   if (v.startsWith('_')) { naVersaoFinal(); return; }

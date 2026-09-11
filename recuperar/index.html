@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ClubMap · Nova senha</title>
+<style>
+  :root{--bg:#0B0F16;--panel:#1A212C;--line:#2A3140;--ink:#EDE6D6;--soft:#9A9080;--gold:#C9A227;--laranja:#C9552F}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    display:grid;place-items:center;padding:26px;position:relative;overflow:hidden}
+  .luz{position:fixed;border-radius:50%;pointer-events:none}
+  .luz1{width:460px;height:460px;background:rgba(201,162,39,.05);top:-150px;right:-130px}
+  .luz2{width:420px;height:420px;background:rgba(201,85,47,.05);bottom:-150px;left:-120px}
+  .col{width:100%;max-width:360px;text-align:center;position:relative}
+  .logo{width:64px;height:64px;border-radius:18px;background:#0E1219;border:1px solid var(--gold);
+    display:grid;place-items:center;position:relative;margin:0 auto 12px;box-shadow:0 0 42px rgba(201,162,39,.22)}
+  .nucleo{width:20px;height:20px;border-radius:11px;background:var(--gold)}
+  .p{position:absolute;width:6px;height:6px;border-radius:3px;background:#D9CCA9}
+  .p1{top:7px;left:50%;margin-left:-3px}.p2{bottom:7px;left:50%;margin-left:-3px}
+  .p3{left:7px;top:50%;margin-top:-3px}.p4{right:7px;top:50%;margin-top:-3px}
+  h1{font-size:24px;font-weight:800;margin:0 0 6px}
+  .sub{color:var(--soft);font-size:13.5px;line-height:1.55;margin:0 0 22px}
+  .sub b{color:var(--gold);font-weight:700}
+  .fld{font-size:10px;letter-spacing:2px;color:var(--soft);font-weight:700;text-align:left;margin-bottom:2px}
+  .linha{display:flex;align-items:center;border-bottom:1.5px solid var(--line);margin-bottom:6px}
+  .linha:focus-within{border-bottom-color:var(--gold)}
+  input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-size:16px;padding:10px 2px}
+  .olho{background:none;border:0;color:var(--soft);font-size:11px;font-weight:700;cursor:pointer;padding:6px}
+  .dica{color:var(--soft);font-size:10.5px;text-align:left;margin:2px 0 0}
+  .cta{width:100%;margin-top:24px;background:var(--laranja);border:0;border-radius:99px;padding:14px;
+    color:#FFF1E8;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 10px 30px rgba(201,85,47,.30)}
+  .cta:disabled{opacity:.7;cursor:default}
+  .erro{color:#E08795;font-size:12.5px;margin-top:10px;min-height:16px}
+  .ok{width:64px;height:64px;margin:0 auto 14px;border-radius:32px;border:1.5px solid #3FA46A;
+    display:grid;place-items:center;font-size:26px;box-shadow:0 0 34px rgba(63,164,106,.25)}
+  [hidden]{display:none!important}
+  a.btn{display:inline-block;margin-top:18px;background:var(--laranja);border-radius:99px;padding:13px 30px;
+    color:#FFF1E8;font-weight:800;font-size:14px;text-decoration:none;box-shadow:0 10px 30px rgba(201,85,47,.30)}
+</style>
+</head>
+<body>
+<div class="luz luz1"></div><div class="luz luz2"></div>
+<div class="col">
+  <div class="logo"><span class="nucleo"></span><span class="p p1"></span><span class="p p2"></span><span class="p p3"></span><span class="p p4"></span></div>
+
+  <div id="ecra-verificar">
+    <h1>Um instante…</h1>
+    <p class="sub">a confirmar o teu link de recuperação</p>
+  </div>
+
+  <div id="ecra-form" hidden>
+    <h1>Definir nova senha</h1>
+    <p class="sub">para a conta <b id="email-conta"></b></p>
+    <div class="fld">NOVA SENHA</div>
+    <div class="linha">
+      <input id="senha" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password">
+      <button class="olho" id="olho" type="button">mostrar</button>
+    </div>
+    <p class="dica">mínimo 6 caracteres · evita a antiga</p>
+    <button class="cta" id="guardar" type="button">Guardar nova senha</button>
+    <p class="erro" id="erro"></p>
+  </div>
+
+  <div id="ecra-ok" hidden>
+    <div class="ok">✓</div>
+    <h1>Senha alterada</h1>
+    <p class="sub">Já podes fechar esta página.<br><b>Volta à app e entra com a senha nova.</b></p>
+    <a class="btn" href="https://clubmapmz.github.io/">Abrir a ClubMap</a>
+  </div>
+
+  <div id="ecra-mau" hidden>
+    <h1>Este link já não serve</h1>
+    <p class="sub" id="mau-msg">O link expirou ou já foi usado.<br>Pede um novo na app, em <b>"Esqueceu a senha?"</b>.</p>
+    <a class="btn" href="https://clubmapmz.github.io/">Abrir a ClubMap</a>
+  </div>
+</div>
+<script>
+/* A página que o link do email de recuperação abre (action URL do Firebase).
+   Sem servidor: o próprio link traz apiKey + oobCode, e a troca da senha é
+   feita via REST do Identity Toolkit. Funciona para teste e produção. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var apiKey = q.get('apiKey');
+  var oob = q.get('oobCode');
+  var modo = q.get('mode');
+  var $ = function (id) { return document.getElementById(id); };
+  function mostra(id) {
+    ['ecra-verificar', 'ecra-form', 'ecra-ok', 'ecra-mau'].forEach(function (e) { $(e).hidden = (e !== id); });
+  }
+  if (!apiKey || !oob || modo !== 'resetPassword') { mostra('ecra-mau'); return; }
+  var base = 'https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=' + encodeURIComponent(apiKey);
+
+  /* 1) confirmar que o código é válido e descobrir o email */
+  fetch(base, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({oobCode: oob})})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.email) { $('email-conta').textContent = d.email; mostra('ecra-form'); }
+      else { mostra('ecra-mau'); }
+    })
+    .catch(function () { mostra('ecra-mau'); });
+
+  $('olho').addEventListener('click', function () {
+    var s = $('senha');
+    s.type = s.type === 'password' ? 'text' : 'password';
+    this.textContent = s.type === 'password' ? 'mostrar' : 'ocultar';
+  });
+
+  /* 2) guardar a senha nova */
+  $('guardar').addEventListener('click', function () {
+    var senha = $('senha').value;
+    if (senha.length < 6) { $('erro').textContent = 'A senha precisa de pelo menos 6 caracteres.'; return; }
+    var btn = $('guardar');
+    btn.disabled = true; btn.textContent = 'a guardar…'; $('erro').textContent = '';
+    fetch(base, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({oobCode: oob, newPassword: senha})})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.email) { mostra('ecra-ok'); return; }
+        var cod = d && d.error && d.error.message || '';
+        if (cod.indexOf('WEAK_PASSWORD') >= 0) { $('erro').textContent = 'Senha fraca — usa pelo menos 6 caracteres.'; }
+        else if (cod.indexOf('OOB_CODE') >= 0) { mostra('ecra-mau'); return; }
+        else { $('erro').textContent = 'Não deu — tenta de novo.'; }
+        btn.disabled = false; btn.textContent = 'Guardar nova senha';
+      })
+      .catch(function () {
+        $('erro').textContent = 'Sem ligação — verifica a internet e tenta de novo.';
+        btn.disabled = false; btn.textContent = 'Guardar nova senha';
+      });
+  });
+})();
+</script>
+</body>
+</html>
